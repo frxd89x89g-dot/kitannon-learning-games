@@ -64,7 +64,7 @@ const ctx = canvas.getContext('2d');
 const uiScore = document.getElementById('score-display');
 const uiQuestion = document.getElementById('question-text');
 const uiTime = document.getElementById('time-display');
-const uiCombo = document.getElementById('combo-display');
+const uiCombo = document.getElementById('combo-popup'); // Updated to new popup
 const uiComboCount = document.getElementById('combo-count');
 const uiFinalScore = document.getElementById('final-score');
 const uiHighScore = document.getElementById('high-score');
@@ -344,23 +344,13 @@ function updateScore(points) {
 
 function updateCombo(count) {
     state.combo = count;
-    // uiComboCount.innerText = state.combo; // Old logic
 
     if (state.combo > 1) {
+        uiCombo.innerText = `${state.combo} COMBO!!`;
         uiCombo.classList.remove('hidden');
-        uiCombo.innerHTML = `<span style="font-size:1.2em">${state.combo}</span> COMBO!!`;
-
-        // Trigger Reflow to restart animation
-        uiCombo.classList.remove('combo-pop');
-        void uiCombo.offsetWidth;
-        uiCombo.classList.add('combo-pop');
-    } else {
-        // Don't hide immediately if it was just shown? 
-        // Actually, on 0 combo (miss), we should probably hide it or let it fade.
-        if (state.combo === 0) {
-            uiCombo.classList.add('hidden');
-            uiCombo.classList.remove('combo-pop');
-        }
+        uiCombo.classList.remove('animate');
+        void uiCombo.offsetWidth; // Reflow
+        uiCombo.classList.add('animate');
     }
 }
 

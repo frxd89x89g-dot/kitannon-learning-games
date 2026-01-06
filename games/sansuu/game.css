@@ -76,6 +76,16 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.grade-select {
+    font-size: 1rem;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: #fff;
+    width: 100%;
+    max-width: 300px;
+}
+
 .score-box .label {
     font-size: 0.8rem;
     color: var(--color-text-light);
@@ -175,6 +185,51 @@ body {
 
     100% {
         transform: translateX(-50%) scale(1.1);
+        opacity: 0;
+    }
+}
+
+/* New Ephemeral Combo Popup */
+.combo-popup {
+    position: absolute;
+    top: 30%;
+    /* Center-ish top */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    font-weight: 900;
+    color: #ffca28;
+    /* Gold/Yellow */
+    text-align: center;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+    text-shadow: 3px 3px 0 #d84315, -1px -1px 0 #fff;
+    opacity: 0;
+}
+
+.combo-popup.animate {
+    animation: comboBounce 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes comboBounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+
+    70% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1.0);
         opacity: 0;
     }
 }
@@ -362,6 +417,28 @@ body {
 }
 
 /* =========================================
+    margin-left: auto;
+    position: relative;
+    z-index: 50;
+}
+
+#pause-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #ccc;
+    font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================
    MOBILE PORTRAIT OPTIMIZATIONS
    ========================================= */
 @media (max-width: 600px) and (orientation: portrait) {
@@ -401,15 +478,38 @@ body {
 
     #score-display,
     #time-display {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+        /* Larger score/time */
     }
 
     /* Question adjustments - VERY LARGE on mobile */
     .question-box {
-        font-size: clamp(2.2rem, 8vw, 3.5rem);
-        padding: 12px 20px;
+        font-size: 3.5rem;
+        /* Fixed large size for stability */
+        padding: 20px 16px;
+        /* More padding */
         width: 100%;
-        max-width: 340px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        max-width: 90%;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Better Grade Dropdown on Mobile */
+    .grade-select-container .grade-select {
+        font-size: 1.2rem;
+        padding: 12px;
+        height: 50px;
+        /* Easy tap target */
+    }
+
+    /* Ensure Start Button is large enough */
+    #start-btn {
+        padding: 18px 40px;
+        font-size: 1.6rem;
+        width: 80%;
+    }
+
+    .settings-preview {
+        width: 100%;
+        text-align: left;
     }
 }
