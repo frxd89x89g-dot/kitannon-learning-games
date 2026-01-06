@@ -1,0 +1,300 @@
+/* Game Specific Styles */
+html,
+body {
+    overflow: hidden;
+    /* Prevent scrolling during game */
+    touch-action: none;
+    /* Prevent browser zoom/swipe */
+    height: 100%;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #e0f7fa;
+    /* Sky blue */
+    overflow: hidden;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* UI Layer */
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Let touches pass through to canvas */
+    display: flex;
+    flex-direction: column;
+}
+
+.hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 16px;
+    /* Safe area for notched phones */
+    padding-top: max(10px, env(safe-area-inset-top));
+}
+
+.score-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--color-primary);
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+}
+
+.score-box .label {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+#score-display {
+    font-size: 1.5rem;
+    color: var(--color-primary-dark);
+}
+
+.question-box {
+    background: white;
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: 3px solid var(--color-accent);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.menu-btn-container {
+    pointer-events: auto;
+}
+
+.icon-btn {
+    background: white;
+    border: 2px solid #ccc;
+    width: 44px;
+    /* Accessible size */
+    height: 44px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #666;
+    cursor: pointer;
+}
+
+/* Combo */
+.hud-combo {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ff5722;
+    text-shadow: 2px 2px 0 white;
+    pointer-events: none;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hud-combo.hidden {
+    display: none;
+}
+
+@keyframes popIn {
+    from {
+        transform: translateX(-50%) scale(0.5);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Overlays */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.modal {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    padding: 30px 20px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.mascot-wrapper {
+    margin-top: -60px;
+    margin-bottom: 10px;
+}
+
+.mascot {
+    width: 100px;
+    height: auto;
+}
+
+.btn-lg {
+    font-size: 1.5rem;
+    padding: 16px 48px;
+    margin-top: 20px;
+}
+
+.result-box {
+    background: #f0f0f0;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.2rem;
+}
+
+.score-row.small {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 8px;
+}
+
+.big-num {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--color-primary-dark);
+}
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.text-link {
+    color: #666;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+/* Settings Modal Specifics */
+.settings-modal {
+    text-align: left;
+}
+
+.settings-modal h3 {
+    text-align: center;
+    margin-top: 0;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.setting-item label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.toggle-group {
+    display: flex;
+    gap: 10px;
+}
+
+.feedback-layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    z-index: 40;
+}
+
+.feedback-layer img {
+    max-width: 60%;
+    max-height: 60%;
+    animation: flashFeedback 0.8s ease-out forwards;
+}
+
+@keyframes flashFeedback {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    20% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+
+    40% {
+        transform: scale(1.0);
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}

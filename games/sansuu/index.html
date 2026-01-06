@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>さんすうゲーム | きたのん</title>
+    <link rel="stylesheet" href="../../assets/css/site.css?v=2">
+    <link rel="stylesheet" href="game.css">
+</head>
+
+<body>
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Background Layer -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD Layer -->
+        <div id="ui-layer">
+            <div class="hud-top">
+                <div class="score-box">
+                    <span class="label">スコア</span>
+                    <span id="score-display">0</span>
+                </div>
+                <div class="question-box">
+                    <span id="question-text">? + ?</span>
+                </div>
+                <!-- TImer Box -->
+                <div class="timer-box"
+                    style="background:#fff; padding:5px 12px; border-radius:15px; border:2px solid #ccc; font-weight:bold; color:#555; display:flex; align-items:center; gap:5px;">
+                    <span>⏰</span>
+                    <span id="time-display">60</span>
+                </div>
+                <div class="menu-btn-container">
+                    <button id="pause-btn" class="icon-btn" aria-label="メニュー">III</button>
+                </div>
+            </div>
+
+            <div class="hud-combo hidden" id="combo-display">
+                <span id="combo-count">0</span> COMBO!!
+            </div>
+        </div>
+
+        <!-- Overlays -->
+        <div id="overlay-start" class="overlay active">
+            <div class="modal">
+                <div class="mascot-wrapper">
+                    <img src="../../assets/characters/kitannon_normal.png" alt="きたのん" class="mascot">
+                </div>
+                <h2>さんすうゲーム</h2>
+                <p>ふうせんを たっちして<br>こたえよう！</p>
+
+                <div class="settings-preview">
+                    <!-- Grade Layout -->
+                    <div style="margin-bottom: 12px;">
+                        <label for="grade-select"
+                            style="font-weight:bold; display:block; margin-bottom:5px; color:#5d4037;">がくねん
+                            (Grade)</label>
+                        <select id="grade-select"
+                            style="font-size: 1.1rem; padding: 8px; border-radius: 10px; border: 2px solid #ccc; width: 100%; max-width: 200px; text-align:center;">
+                            <option value="1">1ねん (たしざん)</option>
+                            <option value="2">2ねん (2けた)</option>
+                            <option value="3">3ねん (かけ算)</option>
+                            <option value="4">4ねん (わり算)</option>
+                            <option value="5">5ねん (小数)</option>
+                            <option value="6">6ねん (速さなど)</option>
+                        </select>
+                    </div>
+
+                    <label style="display: block; margin-top: 10px;">
+                        <input type="checkbox" id="sound-toggle-start" checked>
+                        🔊 音あり
+                    </label>
+                </div>
+
+                <button id="start-btn" class="btn btn-lg">スタート</button>
+                <div style="margin-top:20px;">
+                    <a href="../../games/index.html" class="text-link">もどる</a>
+                    <button id="settings-open-btn" class="text-link"
+                        style="background:none; border:none; margin-left:15px;">⚙️ 設定</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="overlay-gameover" class="overlay hidden">
+            <div class="modal">
+                <h2>おしまい！</h2>
+                <div class="result-box">
+                    <div class="score-row">
+                        <span>スコア</span>
+                        <span id="final-score" class="big-num">0</span>
+                    </div>
+                    <div class="score-row small">
+                        <span>ハイスコア</span>
+                        <span id="high-score">0</span>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button id="retry-btn" class="btn">もういっかい</button>
+                    <a href="../../games/index.html" class="btn btn-secondary">おわる</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal (Guardian) -->
+        <div id="overlay-settings" class="overlay hidden">
+            <div class="modal settings-modal">
+                <h3>保護者設定 (ほごしゃせってい)</h3>
+
+                <div class="setting-item">
+                    <label>風船の速さ</label>
+                    <div class="toggle-group">
+                        <input type="radio" name="speed" id="speed-normal" value="normal" checked>
+                        <label for="speed-normal">ふつう (Normal)</label>
+
+                        <input type="radio" name="speed" id="speed-slow" value="slow">
+                        <label for="speed-slow">ゆっくり (Slow)</label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>低学年モード (ミス減点なし)</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="low-grade-mode">
+                        <label for="low-grade-mode" class="switch-label"></label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>音量設定</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="sound-toggle-settings" checked>
+                        <label for="sound-toggle-settings">効果音・BGM</label>
+                    </div>
+                </div>
+
+                <button id="settings-close-btn" class="btn">とじる</button>
+            </div>
+        </div>
+
+        <!-- Character Feedback Overlay (Flash) -->
+        <div id="char-feedback" class="feedback-layer hidden">
+            <img id="feedback-img" src="../../assets/characters/kitannon_correct.png" alt="">
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
