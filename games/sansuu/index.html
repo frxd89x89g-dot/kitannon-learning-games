@@ -19,26 +19,38 @@
         <!-- HUD Layer -->
         <div id="ui-layer">
             <div class="hud-top">
-                <div class="score-box">
-                    <span class="label">スコア</span>
-                    <span id="score-display">0</span>
+                <div class="hud-row">
+                    <!-- Score -->
+                    <div class="score-box hud-item">
+                        <span class="label">スコア</span>
+                        <span class="icon">⭐</span>
+                        <span id="score-display">0</span>
+                    </div>
+
+                    <!-- Timer -->
+                    <div class="timer-box hud-item">
+                        <span class="icon">⏰</span>
+                        <span id="time-display">60</span>
+                    </div>
+
+                    <!-- Pause/Menu -->
+                    <div class="menu-btn-container">
+                        <button id="pause-btn" class="icon-btn" aria-label="メニュー">
+                            <span class="menu-icon">|||</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="question-box">
-                    <span id="question-text">? + ?</span>
-                </div>
-                <!-- TImer Box -->
-                <div class="timer-box"
-                    style="background:#fff; padding:5px 12px; border-radius:15px; border:2px solid #ccc; font-weight:bold; color:#555; display:flex; align-items:center; gap:5px;">
-                    <span>⏰</span>
-                    <span id="time-display">60</span>
-                </div>
-                <div class="menu-btn-container">
-                    <button id="pause-btn" class="icon-btn" aria-label="メニュー">III</button>
+
+                <!-- Question (Full Width Row) -->
+                <div class="question-row">
+                    <div class="question-box">
+                        <span id="question-text">? + ?</span>
+                    </div>
                 </div>
             </div>
 
             <div class="hud-combo hidden" id="combo-display">
-                <span id="combo-count">0</span> COMBO!!
+                <span id="combo-count">0</span>🔥
             </div>
         </div>
 
@@ -53,12 +65,9 @@
 
                 <div class="settings-preview">
                     <!-- Grade Layout -->
-                    <div style="margin-bottom: 12px;">
-                        <label for="grade-select"
-                            style="font-weight:bold; display:block; margin-bottom:5px; color:#5d4037;">がくねん
-                            (Grade)</label>
-                        <select id="grade-select"
-                            style="font-size: 1.1rem; padding: 8px; border-radius: 10px; border: 2px solid #ccc; width: 100%; max-width: 200px; text-align:center;">
+                    <div class="grade-select-container">
+                        <label for="grade-select" class="grade-label">がくねん (Grade)</label>
+                        <select id="grade-select" class="grade-select">
                             <option value="1">1ねん (たしざん)</option>
                             <option value="2">2ねん (2けた)</option>
                             <option value="3">3ねん (かけ算)</option>
@@ -68,7 +77,7 @@
                         </select>
                     </div>
 
-                    <label style="display: block; margin-top: 10px;">
+                    <label class="sound-label">
                         <input type="checkbox" id="sound-toggle-start" checked>
                         🔊 音あり
                     </label>

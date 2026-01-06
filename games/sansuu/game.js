@@ -6,14 +6,29 @@
 // --- Configuration & Constants ---
 const CONFIG = {
     colors: ['#EF5350', '#42A5F5', '#66BB6A', '#FFCA28', '#AB47BC', '#FF7043'],
-    spawnInterval: 1.2, // Seconds between spawns
-    travelTimeNormal: 5.0, // Seconds to cross screen
-    travelTimeSlow: 7.0,
+
+    // Spawn Settings
+    spawnIntervalPC: 1.2,
+    spawnIntervalMobile: 1.6, // Slower spawn on mobile
+
+    // Balloon Travel Time (Safety: Slower on mobile)
+    travelTimeNormalPC: 5.0,
+    travelTimeNormalMobile: 6.5, // 30% slower
+    travelTimeSlowPC: 7.0,
+    travelTimeSlowMobile: 9.0,
+
+    // Limits
     maxBalloonsPC: 8,
     maxBalloonsMobile: 5,
+
+    // Sizing
     mobileHeightThreshold: 700,
-    balloonBaseRadius: 35,
-    hitRadiusExpand: 15,
+    mobileWidthThreshold: 600,
+
+    balloonBaseRadiusPC: 35,
+    balloonBaseRadiusMobile: 45, // Larger tap target
+    hitRadiusExpand: 15, // Extra invisible hit area
+
     gameDuration: 60, // Seconds
 };
 
@@ -58,6 +73,50 @@ const overlayGameOver = document.getElementById('overlay-gameover');
 const overlaySettings = document.getElementById('overlay-settings');
 const feedbackLayer = document.getElementById('char-feedback');
 const feedbackImg = document.getElementById('feedback-img');
+
+// --- Helper Functions ---
+function isMobile() {
+    return window.innerHeight < CONFIG.mobileHeightThreshold || window.innerWidth < CONFIG.mobileWidthThreshold;
+}
+
+// Format text for better readability on small screens
+function formatQuestionText(text) {
+    if (!isMobile()) return text;
+    if (text.length < 12) return text; // Short questions are fine
+
+    // Logic for breaking long questions (e.g. Grade 6)
+    // 1. Break before "×", "÷" 
+    // 2. Break after "時間" if followed by "="
+    // 3. Break before "="
+
+    // For Grade 6 math "時速60km × 2時間 = ?"
+    // Keep numbers and units together if possible.
+
+    // Simple heuristic: Splitting at the operator for clear 2-line layout
+    // Replace " × " with "\n× " to wrap nicely
+    // Replace " ÷ " with "\n÷ "
+
+    if (text.includes(" =")) {
+        // Try to break at the main operator if it's long
+        if (text.includes(" × ")) {
+            return text.replace(" × ", "\n× ");
+        }
+        if (text.includes(" ÷ ")) {
+            return text.replace(" ÷ ", "\n÷ ");
+        }
+    }
+
+    // Fallback: Break after space if too long
+    if (text.length > 15) {
+        const mid = Math.floor(text.length / 2);
+        const spaceIdx = text.lastIndexOf(' ', mid);
+        if (spaceIdx > 0) {
+            return text.substring(0, spaceIdx) + '\n' + text.substring(spaceIdx + 1);
+        }
+    }
+
+    return text;
+}
 
 // --- Initialization ---
 function init() {
@@ -201,8 +260,6 @@ function resetGame() {
     startGame();
 }
 
-// function togglePause() removed/replaced by openSettings/closeSettings
-
 function gameOver() {
     state.isPlaying = false;
     stopBGM();
@@ -273,7 +330,8 @@ function generateQuestion() {
     }
 
     state.question = { text, ans };
-    uiQuestion.innerText = text;
+    // Use formatQuestionText for display
+    uiQuestion.innerText = formatQuestionText(text);
 
     spawnBalloon(true);
 }
@@ -299,7 +357,9 @@ function updateCombo(count) {
 
 class Balloon {
     constructor(isCorrect) {
-        this.radius = CONFIG.balloonBaseRadius;
+        const mobile = isMobile();
+        this.radius = mobile ? CONFIG.balloonBaseRadiusMobile : CONFIG.balloonBaseRadiusPC;
+
         const margin = this.radius * 2;
         this.x = Math.random() * (state.canvas.width - margin) + (margin / 2);
         this.y = state.canvas.height + this.radius;
@@ -333,9 +393,16 @@ class Balloon {
         this.isCorrect = isCorrect;
         this.color = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
 
-        const travelTime = state.settings.speed === 'slow' ? CONFIG.travelTimeSlow : CONFIG.travelTimeNormal;
-        this.speed = (state.canvas.height + this.radius * 2) / travelTime;
-        this.speed *= (0.9 + Math.random() * 0.2);
+        // Speed Logic
+        let baseTime;
+        if (state.settings.speed === 'slow') {
+            baseTime = mobile ? CONFIG.travelTimeSlowMobile : CONFIG.travelTimeSlowPC;
+        } else {
+            baseTime = mobile ? CONFIG.travelTimeNormalMobile : CONFIG.travelTimeNormalPC;
+        }
+
+        this.speed = (state.canvas.height + this.radius * 2) / baseTime;
+        this.speed *= (0.9 + Math.random() * 0.2); // +20% variance
     }
 
     update(dt) {
@@ -357,7 +424,7 @@ class Balloon {
         ctx.fill();
 
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 24px sans-serif';
+        ctx.font = `bold ${this.radius * 0.7}px sans-serif`; // Scale font with radius
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.value, this.x, this.y + 2);
@@ -378,12 +445,15 @@ class Balloon {
         const dx = px - this.x;
         const dy = py - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        // Generous hit area
         return dist < (this.radius + CONFIG.hitRadiusExpand);
     }
 }
 
 function spawnBalloon(forceCorrect = false) {
-    const limit = state.canvas.height < CONFIG.mobileHeightThreshold ? CONFIG.maxBalloonsMobile : CONFIG.maxBalloonsPC;
+    const mobile = isMobile();
+    const limit = mobile ? CONFIG.maxBalloonsMobile : CONFIG.maxBalloonsPC;
+
     if (state.balloons.length >= limit) return;
 
     const hasCorrect = state.balloons.some(b => b.isCorrect);
@@ -417,12 +487,16 @@ function update(dt) {
     uiTime.innerText = Math.ceil(state.timeLeft);
 
     state.spawnTimer += dt;
-    if (state.spawnTimer > CONFIG.spawnInterval) {
+
+    // Dynamic interval check based on device
+    const interval = isMobile() ? CONFIG.spawnIntervalMobile : CONFIG.spawnIntervalPC;
+
+    if (state.spawnTimer > interval) {
         state.spawnTimer = 0;
         spawnBalloon();
 
         const hasCorrect = state.balloons.some(b => b.isCorrect);
-        if (!hasCorrect) {
+        if (!hasCorrect && state.balloons.length < 3) { // Ensure playability
             spawnBalloon(true);
         }
     }
