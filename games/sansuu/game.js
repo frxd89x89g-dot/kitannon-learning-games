@@ -133,7 +133,7 @@ function init() {
     setupInput();
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('retry-btn').addEventListener('click', resetGame);
-    document.getElementById('pause-btn').addEventListener('click', openSettings);
+
 
     // Grade Selector
     const gradeSelect = document.getElementById('grade-select');
