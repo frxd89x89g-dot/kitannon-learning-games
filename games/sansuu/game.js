@@ -96,14 +96,13 @@ function formatQuestionText(text) {
     // Replace " × " with "\n× " to wrap nicely
     // Replace " ÷ " with "\n÷ "
 
+    // If manual newlines exist (Grade 6), respect them
+    if (text.includes('\n')) return text;
+
     if (text.includes(" =")) {
-        // Try to break at the main operator if it's long
-        if (text.includes(" × ")) {
-            return text.replace(" × ", "\n× ");
-        }
-        if (text.includes(" ÷ ")) {
-            return text.replace(" ÷ ", "\n÷ ");
-        }
+        // ... (rest of logic for other grades)
+        if (text.includes(" × ")) return text.replace(" × ", "\n× ");
+        if (text.includes(" ÷ ")) return text.replace(" ÷ ", "\n÷ ");
     }
 
     // Fallback: Break after space if too long
@@ -318,13 +317,19 @@ function generateQuestion() {
         const dist = speed * time;
 
         if (type === 0) {
-            text = `時速${speed}km × ${time}時間 = ?km`;
+            // Speed x Time = Distance
+            // "30km/h for 2 hours. Distance?" (~15 chars)
+            text = `時速${speed}kmで${time}時間。\n何km進む？`;
             ans = dist;
         } else if (type === 1) {
-            text = `${dist}km ÷ ${time}時間 = ?km/h`;
+            // Distance / Time = Speed
+            // "120km in 2 hours. Speed?" (~15 chars)
+            text = `${dist}kmを${time}時間。\n時速は何km？`;
             ans = speed;
         } else {
-            text = `${dist}km ÷ 時速${speed}km = ?時間`;
+            // Distance / Speed = Time
+            // "120km at 60km/h. Time?" (~15 chars)
+            text = `${dist}kmを時速${speed}km。\n何時間かかる？`;
             ans = time;
         }
     }

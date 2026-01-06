@@ -117,7 +117,7 @@ body {
 /* Question adjustments (Mobile-First) */
 .question-box {
     background: #fff;
-    padding: 8px 16px;
+    padding: 6px 16px;
     border-radius: 16px;
     border: 3px solid var(--color-accent);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -469,31 +469,31 @@ body {
     .question-box {
         font-size: clamp(24px, 6.2vw, 38px);
         /* Fixed large size for stability */
-        padding: 12px 16px;
+        padding: 8px 16px;
         /* More padding */
         width: 100%;
         max-width: 90%;
         box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
     }
-}
 
-/* Better Grade Dropdown on Mobile */
-.grade-select-container .grade-select {
-    font-size: 1.2rem;
-    padding: 12px;
-    height: 50px;
-    /* Easy tap target */
-}
 
-/* Ensure Start Button is large enough */
-#start-btn {
-    padding: 18px 40px;
-    font-size: 1.6rem;
-    width: 80%;
-}
+    /* Better Grade Dropdown on Mobile */
+    .grade-select-container .grade-select {
+        font-size: 1.2rem;
+        padding: 12px;
+        height: 50px;
+        /* Easy tap target */
+    }
 
-.settings-preview {
-    width: 100%;
-    text-align: left;
-}
+    /* Ensure Start Button is large enough */
+    #start-btn {
+        padding: 18px 40px;
+        font-size: 1.6rem;
+        width: 80%;
+    }
+
+    .settings-preview {
+        width: 100%;
+        text-align: left;
+    }
 }
