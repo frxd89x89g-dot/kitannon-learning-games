@@ -344,14 +344,23 @@ function updateScore(points) {
 
 function updateCombo(count) {
     state.combo = count;
-    uiComboCount.innerText = state.combo;
+    // uiComboCount.innerText = state.combo; // Old logic
+
     if (state.combo > 1) {
         uiCombo.classList.remove('hidden');
-        uiCombo.style.animation = 'none';
-        uiCombo.offsetHeight;
-        uiCombo.style.animation = null;
+        uiCombo.innerHTML = `<span style="font-size:1.2em">${state.combo}</span> COMBO!!`;
+
+        // Trigger Reflow to restart animation
+        uiCombo.classList.remove('combo-pop');
+        void uiCombo.offsetWidth;
+        uiCombo.classList.add('combo-pop');
     } else {
-        uiCombo.classList.add('hidden');
+        // Don't hide immediately if it was just shown? 
+        // Actually, on 0 combo (miss), we should probably hide it or let it fade.
+        if (state.combo === 0) {
+            uiCombo.classList.add('hidden');
+            uiCombo.classList.remove('combo-pop');
+        }
     }
 }
 
@@ -811,9 +820,9 @@ function playSound(type) {
         // Simple approximation: Quick rising sweep with noise is hard with just oscillator, so use Square Wave sweep
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15); // Slightly lower pitch
 
-        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.setValueAtTime(0.05, now); // Quiet "bling"
         gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
 
         osc.start(now);

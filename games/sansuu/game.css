@@ -102,6 +102,83 @@ body {
 
 /* ... existing code ... */
 
+/* Question adjustments (Mobile-First) */
+.question-box {
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 16px;
+    border: 3px solid var(--color-accent);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    font-size: clamp(2rem, 6vw, 2.5rem);
+    font-weight: 900;
+    color: #333;
+    text-align: center;
+    white-space: pre-line;
+    min-width: 240px;
+    line-height: 1.2;
+    z-index: 20;
+    /* Ensure it stays above balloons if they get close */
+}
+
+/* Combo Popup (Transient) */
+.hud-combo {
+    position: absolute;
+    top: 140px;
+    /* Below question */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #ff5722;
+    text-shadow:
+        2px 2px 0 #fff,
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 30;
+    opacity: 0;
+    /* Hidden by default */
+}
+
+/* Animation class added via JS */
+.combo-pop {
+    animation: popAndFade 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.hud-combo.hidden {
+    display: none;
+}
+
+@keyframes popAndFade {
+    0% {
+        transform: translateX(-50%) scale(0.5);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translateX(-50%) scale(1.2);
+        opacity: 1;
+    }
+
+    40% {
+        transform: translateX(-50%) scale(1.0);
+        opacity: 1;
+    }
+
+    80% {
+        transform: translateX(-50%) scale(1.0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(-50%) scale(1.1);
+        opacity: 0;
+    }
+}
+
 /* Overlays */
 .overlay {
     position: absolute;
@@ -281,5 +358,58 @@ body {
     100% {
         opacity: 0;
         transform: scale(1.1);
+    }
+}
+
+/* =========================================
+   MOBILE PORTRAIT OPTIMIZATIONS
+   ========================================= */
+@media (max-width: 600px) and (orientation: portrait) {
+    .hud-top {
+        padding: 5px 10px;
+        padding-top: max(10px, env(safe-area-inset-top));
+        gap: 12px;
+    }
+
+    /* Combo popup slightly higher on mobile to avoid balloons */
+    .hud-combo {
+        top: 130px;
+        font-size: 2rem;
+    }
+
+    /* Compact Row */
+    .hud-row {
+        gap: 8px;
+    }
+
+    .hud-item {
+        padding: 4px 10px;
+        min-width: auto;
+        height: 36px;
+        border-width: 1.5px;
+    }
+
+    /* Hide text labels, show icons */
+    .score-box .label {
+        display: none;
+    }
+
+    .hud-item .icon {
+        display: inline-block;
+        margin-right: 2px;
+    }
+
+    #score-display,
+    #time-display {
+        font-size: 1.2rem;
+    }
+
+    /* Question adjustments - VERY LARGE on mobile */
+    .question-box {
+        font-size: clamp(2.2rem, 8vw, 3.5rem);
+        padding: 12px 20px;
+        width: 100%;
+        max-width: 340px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 }
