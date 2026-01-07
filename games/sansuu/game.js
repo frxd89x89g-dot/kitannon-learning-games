@@ -117,6 +117,12 @@ function formatQuestionText(text) {
     return text;
 }
 
+// Normalize value for comparison (Grade 5 decimals vs integers)
+function normalize(v) {
+    if (Number.isInteger(v)) return v.toString();
+    return v.toFixed(1);
+}
+
 // --- Initialization ---
 function init() {
     // Load Images
@@ -561,7 +567,12 @@ function handleHit(index) {
     const balloon = state.balloons[index];
     state.balloons.splice(index, 1);
 
-    if (balloon.isCorrect) {
+    // Dynamic correctness check
+    const valStr = normalize(balloon.value);
+    const ansStr = normalize(state.question.ans);
+    const isCorrect = (valStr === ansStr);
+
+    if (isCorrect) {
         playSound('correct');
         showCharFeedback('correct');
         const comboBonus = Math.min(state.combo * 5, 50);
