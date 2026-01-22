@@ -32,12 +32,6 @@ const CONFIG = {
     gameDuration: 60, // Seconds
 };
 
-// --- Scoring Tables (grade-scaled) ---
-const SCORE = {
-    correct: { 1: 8, 2: 10, 3: 12, 4: 14, 5: 16, 6: 20 },
-    wrong:   { 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 8 },
-};
-
 // --- State Management ---
 const state = {
     isPlaying: false,
@@ -88,7 +82,9 @@ function isMobile() {
 // Format text for better readability on small screens
 function formatQuestionText(text) {
     if (!isMobile()) return text;
-    if (text.length < 12) return text;
+    if (text.length < 12) return text; // Short questions are fine
+
+    // If manual newlines exist, respect them
     if (text.includes('\n')) return text;
 
     if (text.includes(" =")) {
@@ -96,6 +92,7 @@ function formatQuestionText(text) {
         if (text.includes(" ÷ ")) return text.replace(" ÷ ", "\n÷ ");
     }
 
+    // Fallback: Break after space if too long
     if (text.length > 15) {
         const mid = Math.floor(text.length / 2);
         const spaceIdx = text.lastIndexOf(' ', mid);
@@ -107,17 +104,10 @@ function formatQuestionText(text) {
     return text;
 }
 
-// Normalize value for comparison (Decimals vs integers)
+// Normalize value for comparison (Grade 5 decimals vs integers)
 function normalize(v) {
     if (Number.isInteger(v)) return v.toString();
     return v.toFixed(1);
-}
-
-function rInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-function round1(v) {
-    return Math.round(v * 10) / 10;
 }
 
 // --- Initialization ---
@@ -150,6 +140,7 @@ function init() {
     document.getElementById('settings-open-btn').addEventListener('click', openSettings);
     document.getElementById('settings-close-btn').addEventListener('click', closeSettings);
 
+    // Also allow closing by clicking the overlay background (optional but good UX)
     overlaySettings.addEventListener('click', (e) => {
         if (e.target === overlaySettings) closeSettings();
     });
@@ -194,6 +185,7 @@ function saveSettings() {
     localStorage.setItem('kitannon_math_lowgrade', state.settings.lowGrade);
     localStorage.setItem('kitannon_math_sound', state.settings.sound);
 
+    // Update logic to handle Start/Stop audio based on new setting
     if (wasSoundOn && !soundOn) {
         stopBGM();
     } else if (!wasSoundOn && soundOn && state.isPlaying && !state.isPaused) {
@@ -202,6 +194,7 @@ function saveSettings() {
 }
 
 // --- Game Logic ---
+
 function openSettings() {
     state.isPaused = true;
     overlaySettings.classList.remove('hidden');
@@ -212,9 +205,10 @@ function closeSettings() {
     overlaySettings.classList.add('hidden');
     saveSettings();
 
+    // Resume Game
     if (state.isPlaying) {
         state.isPaused = false;
-        state.lastTime = performance.now();
+        state.lastTime = performance.now(); // Reset delta time to prevent jump
         if (state.settings.sound) startBGM();
     }
 }
@@ -224,7 +218,7 @@ function startGame() {
     if (startToggle) state.settings.sound = startToggle.checked;
     saveSettings();
 
-    initAudio();
+    initAudio(); // Resume/Create Audio Context
 
     state.isPlaying = true;
     state.isPaused = false;
@@ -245,6 +239,7 @@ function startGame() {
 
     playSound('start');
 
+    // Start BGM with slight delay
     setTimeout(() => {
         if (state.isPlaying && !state.isPaused) startBGM();
     }, 500);
@@ -270,175 +265,88 @@ function gameOver() {
     playSound('finish');
 }
 
-/**
- * Spawn initial balloons for a new question:
- * - Reset on-screen balloons (prevents "previous answer remains" bug)
- * - Make first balloon NOT always correct: spawn 1 correct + 1 wrong in random order
- */
-function spawnInitialBalloons() {
-    state.balloons = [];
-    if (Math.random() < 0.5) {
-        spawnBalloon(false);
-        spawnBalloon(true);
-    } else {
-        spawnBalloon(true);
-        spawnBalloon(false);
-    }
-}
-
-/**
- * Grade difficulty tiers:
- * 1: single-digit addition (fewer hard carry)
- * 2: two-digit add/sub (with carry/borrow)
- * 3: multiplication only
- * 4: division (exact) + easy word problem low rate
- * 5: decimals (1dp) add/sub + occasional (decimal×int) or (decimal÷int) to 1dp
- * 6: speed/time/distance word problems (no × ÷ shown), minutes + varied speeds (avoid exploit)
- */
 function generateQuestion() {
     const g = state.settings.grade;
     let text = "";
     let ans = 0;
 
     if (g === 1) {
-        // Prefer non-carry to keep it friendly
-        let a = rInt(1, 9);
-        let b = rInt(1, 9);
-        if (Math.random() < 0.65) {
-            // try to keep a+b <= 9
-            a = rInt(1, 8);
-            b = rInt(1, 9 - a);
-        }
+        const a = Math.floor(Math.random() * 9) + 1;
+        const b = Math.floor(Math.random() * 9) + 1;
         ans = a + b;
         text = `${a} + ${b} = ?`;
     }
     else if (g === 2) {
-        const isSub = Math.random() < 0.5;
-        if (!isSub) {
-            // two-digit addition with carry often
-            let a10 = rInt(10, 99);
-            let b10 = rInt(10, 99);
-            if (Math.random() < 0.6) {
-                // force carry on ones digit
-                const aOnes = rInt(5, 9);
-                const bOnes = rInt(10 - aOnes, 9);
-                const aTens = rInt(1, 9);
-                const bTens = rInt(1, 9);
-                a10 = aTens * 10 + aOnes;
-                b10 = bTens * 10 + bOnes;
-            }
-            ans = a10 + b10;
-            text = `${a10} + ${b10} = ?`;
-        } else {
-            // two-digit subtraction with borrow often, result >= 0
-            let a10 = rInt(10, 99);
-            let b10 = rInt(10, 99);
-            if (b10 > a10) [a10, b10] = [b10, a10];
-
-            if (Math.random() < 0.6) {
-                // force borrow (ones of a < ones of b)
-                const aOnes = rInt(0, 4);
-                const bOnes = rInt(aOnes + 1, 9);
-                const aTens = rInt(2, 9);
-                const bTens = rInt(1, aTens); // keep <= aTens
-                a10 = aTens * 10 + aOnes;
-                b10 = bTens * 10 + bOnes;
-                if (b10 > a10) [a10, b10] = [b10, a10];
-            }
-
-            ans = a10 - b10;
-            text = `${a10} - ${b10} = ?`;
-        }
+        const a = Math.floor(Math.random() * 41) + 10;
+        const b = Math.floor(Math.random() * 31) + 10;
+        ans = a + b;
+        text = `${a} + ${b} = ?`;
     }
     else if (g === 3) {
-        const a = rInt(2, 9);
-        const b = rInt(2, 9);
+        const a = Math.floor(Math.random() * 8) + 2;
+        const b = Math.floor(Math.random() * 8) + 2;
         ans = a * b;
         text = `${a} × ${b} = ?`;
     }
     else if (g === 4) {
-        if (Math.random() < 0.2) {
-            // easy word problem (division meaning), keep numbers small
-            const divisor = rInt(2, 6);
-            const each = rInt(2, 9);
-            const total = divisor * each;
-            ans = each;
-            text = `${total}こを${divisor}人で同じ数ずつ。\n1人何こ？`;
-        } else {
-            // exact division, slightly wider range than grade 3
-            const divisor = rInt(2, 12);
-            const quotient = rInt(2, 12);
-            const dividend = divisor * quotient;
-            ans = quotient;
-            text = `${dividend} ÷ ${divisor} = ?`;
-        }
+        const divisor = Math.floor(Math.random() * 8) + 2;
+        ans = Math.floor(Math.random() * 8) + 2;
+        const dividend = ans * divisor;
+        text = `${dividend} ÷ ${divisor} = ?`;
     }
     else if (g === 5) {
-        // Mix of:
-        // A) decimal add/sub (1dp)
-        // B) decimal × int
-        // C) decimal ÷ int (divisible to 1dp)
-        const type = rInt(1, 4); // bias toward add/sub
-        if (type === 1 || type === 2) {
-            let a = rInt(5, 99) / 10;  // 0.5 - 9.9
-            let b = rInt(5, 99) / 10;
-            if (type === 1) {
-                ans = round1(a + b);
-                text = `${a.toFixed(1)} + ${b.toFixed(1)} = ?`;
-            } else {
-                if (b > a) [a, b] = [b, a];
-                ans = round1(a - b);
-                text = `${a.toFixed(1)} - ${b.toFixed(1)} = ?`;
-            }
-        } else if (type === 3) {
-            const a = rInt(5, 99) / 10; // 0.5-9.9
-            const m = rInt(2, 9);
-            ans = round1(a * m);
-            text = `${a.toFixed(1)} × ${m} = ?`;
-        } else {
-            // make (a ÷ d) = 1dp exact
-            const d = rInt(2, 9);
-            const q = rInt(5, 99) / 10;      // 0.5-9.9
-            const a = round1(q * d);         // ensures divisible to 1dp
-            ans = q;
-            text = `${a.toFixed(1)} ÷ ${d} = ?`;
-        }
+        const a = (Math.floor(Math.random() * 9) + 1) / 10;
+        const b = (Math.floor(Math.random() * 9) + 1) / 10;
+        ans = Math.round((a + b) * 10) / 10;
+        text = `${a} + ${b} = ?`;
     }
     else if (g === 6) {
-        // Speed/Time/Distance word problems WITHOUT showing × or ÷
-        // Use minutes and varied speeds to avoid exploit
+        // 6年：速さ（やさしめ版）
+        // ねらい：5年より難しいが、計算が重すぎないように調整
+        // - 分を使う（抜け道潰しは継続）
+        // - 距離は整数kmになる組み合わせにする（小数は使わない）
+        // - 速さは5km刻み、時間は10分刻み
+        // - × ÷ 記号は出さない（文章から考える）
+
+        const rInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
         const type = rInt(1, 3);
 
-        // speed: 12..85 (not only multiples of 10)
-        const speed = rInt(12, 85);
+        // speed: 25..80 step 5
+        const speed = rInt(5, 16) * 5;
 
-        // time minutes: 15..180 step 5
-        const minutes = rInt(3, 36) * 5;
-        const hours = minutes / 60;
+        // minutes: 20..120 step 10
+        let minutes = rInt(2, 12) * 10;
 
-        // distance in km (keep 0.1 precision)
-        const distKm = round1(speed * hours);
+        // distKm = speed * (minutes/60) が整数になるように minutes を選ぶ
+        // つまり (speed * minutes) が 60 の倍数
+        let tries = 0;
+        while (((speed * minutes) % 60) !== 0 && tries < 25) {
+            minutes = rInt(2, 12) * 10;
+            tries++;
+        }
+
+        const dist = (speed * minutes) / 60; // 整数kmの想定
 
         if (type === 1) {
-            // Ask distance
-            ans = distKm;
+            // 距離を求める
             text = `時速${speed}kmで${minutes}分進む。\n何km進む？`;
+            ans = dist;
         } else if (type === 2) {
-            // Ask speed (avoid giving away: use km and minutes)
+            // 速さを求める
+            text = `${dist}kmを${minutes}分で進む。\n時速は何km？`;
             ans = speed;
-            text = `${distKm.toFixed(1)}kmを${minutes}分で進む。\n時速は何km？`;
         } else {
-            // Ask time in minutes (make it match our minutes so answer is integer)
+            // 時間(分)を求める
+            text = `${dist}kmを時速${speed}kmで進む。\n何分かかる？`;
             ans = minutes;
-            text = `${distKm.toFixed(1)}kmを時速${speed}kmで進む。\n何分かかる？`;
         }
     }
 
     state.question = { text, ans };
+    // Use formatQuestionText for display
     uiQuestion.innerText = formatQuestionText(text);
 
-    // IMPORTANT: reset balloons for new question (A方針) + avoid "first always correct"
-    spawnInitialBalloons();
+    spawnBalloon(true);
 }
 
 function updateScore(points) {
@@ -528,7 +436,7 @@ class Balloon {
         ctx.fill();
 
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${this.radius * 0.7}px sans-serif`;
+        ctx.font = `bold ${this.radius * 0.7}px sans-serif`; // Scale font with radius
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.value, this.x, this.y + 2);
@@ -549,6 +457,7 @@ class Balloon {
         const dx = px - this.x;
         const dy = py - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+        // Generous hit area
         return dist < (this.radius + CONFIG.hitRadiusExpand);
     }
 }
@@ -591,6 +500,7 @@ function update(dt) {
 
     state.spawnTimer += dt;
 
+    // Dynamic interval check based on device
     const interval = isMobile() ? CONFIG.spawnIntervalMobile : CONFIG.spawnIntervalPC;
 
     if (state.spawnTimer > interval) {
@@ -598,7 +508,7 @@ function update(dt) {
         spawnBalloon();
 
         const hasCorrect = state.balloons.some(b => b.isCorrect);
-        if (!hasCorrect && state.balloons.length < 3) {
+        if (!hasCorrect && state.balloons.length < 3) { // Ensure playability
             spawnBalloon(true);
         }
     }
@@ -659,32 +569,27 @@ function handleHit(index) {
     const balloon = state.balloons[index];
     state.balloons.splice(index, 1);
 
+    // Dynamic correctness check
     const valStr = normalize(balloon.value);
     const ansStr = normalize(state.question.ans);
     const isCorrect = (valStr === ansStr);
 
-    const g = state.settings.grade;
-
     if (isCorrect) {
         playSound('correct');
         showCharFeedback('correct');
-
-        // Grade-based base + existing combo bonus behavior
-        const base = SCORE.correct[g];
         const comboBonus = Math.min(state.combo * 5, 50);
-        updateScore(base + comboBonus);
-
+        updateScore(10 + comboBonus);
         updateCombo(state.combo + 1);
-        if (state.combo > 1) playSound('combo');
-
+        if (state.combo > 1) {
+            playSound('combo');
+        }
         generateQuestion();
     } else {
         playSound('wrong');
         showCharFeedback('wrong');
-
-        const penalty = state.settings.lowGrade ? 0 : SCORE.wrong[g];
-        updateScore(-penalty);
-
+        if (!state.settings.lowGrade) {
+            updateScore(-5);
+        }
         updateCombo(0);
     }
 }
@@ -720,9 +625,11 @@ const NOTES = {
     'C5': 523.25
 };
 
+// Retro Chiptune Composition
 const BPM = 120;
 const BEAT = 60 / BPM;
 
+// Melody: distinct, happy, repeating phrase
 const MELODY_SEQ = [
     { n: 'C4', d: 0.5 }, { n: 'E4', d: 0.5 }, { n: 'G4', d: 0.5 }, { n: 'E4', d: 0.5 },
     { n: 'F4', d: 0.5 }, { n: 'A4', d: 0.5 }, { n: 'G4', d: 1.0 },
@@ -730,6 +637,7 @@ const MELODY_SEQ = [
     { n: 'F4', d: 0.5 }, { n: 'D4', d: 0.5 }, { n: 'C4', d: 1.0 }
 ];
 
+// Bass: Simple root steps
 const BASS_SEQ = [
     { n: 'C3', d: 2.0 },
     { n: 'G3', d: 2.0 },
@@ -830,8 +738,8 @@ function playSound(type) {
 
     if (type === 'correct') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
@@ -863,10 +771,10 @@ function playSound(type) {
 
     } else if (type === 'finish') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(523.25, now); // C5
         osc.frequency.setValueAtTime(523.25, now + 0.1);
         osc.frequency.setValueAtTime(523.25, now + 0.2);
-        osc.frequency.setValueAtTime(659.25, now + 0.4);
+        osc.frequency.setValueAtTime(659.25, now + 0.4); // E5
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.setValueAtTime(0.1, now + 0.3);
