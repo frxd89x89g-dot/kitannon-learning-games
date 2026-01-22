@@ -1,6 +1,13 @@
 /**
  * Math Balloon Game - Kitannon
  * Handles game loop, physics, input, and state management.
+ *
+ * Updates:
+ * - Grade difficulty tiers clarified (1 easiest -> 6 hardest)
+ * - Grade-based scoring tables (correct/wrong)
+ * - Fix: Reset balloons on every new question (Option A) to prevent stale-answer taps
+ * - Fix: Ensure initial balloons are NOT always correct (spawn a mixed initial batch)
+ * - Add: Robust "Back to Sansuu Home" navigation during play and after game over
  */
 
 // --- Configuration & Constants ---
@@ -30,6 +37,16 @@ const CONFIG = {
     hitRadiusExpand: 15, // Extra invisible hit area
 
     gameDuration: 60, // Seconds
+
+    // --- NEW: initial spawn per question (to avoid "first balloon always correct") ---
+    initialBalloonsPC: 3,
+    initialBalloonsMobile: 3,
+};
+
+// --- Grade-based scoring (B) ---
+const SCORE_TABLE = {
+    correct: { 1: 8, 2: 10, 3: 12, 4: 14, 5: 16, 6: 20 },
+    wrong:   { 1: 2, 2: 3,  3: 4,  4: 5,  5: 6,  6: 8  }
 };
 
 // --- State Management ---
@@ -64,7 +81,7 @@ const ctx = canvas.getContext('2d');
 const uiScore = document.getElementById('score-display');
 const uiQuestion = document.getElementById('question-text');
 const uiTime = document.getElementById('time-display');
-const uiCombo = document.getElementById('combo-popup'); // Updated to new popup
+const uiCombo = document.getElementById('combo-popup');
 const uiComboCount = document.getElementById('combo-count');
 const uiFinalScore = document.getElementById('final-score');
 const uiHighScore = document.getElementById('high-score');
@@ -82,17 +99,11 @@ function isMobile() {
 // Format text for better readability on small screens
 function formatQuestionText(text) {
     if (!isMobile()) return text;
-    if (text.length < 12) return text; // Short questions are fine
+    if (text.length < 12) return text;
 
-    // If manual newlines exist, respect them
     if (text.includes('\n')) return text;
 
-    if (text.includes(" =")) {
-        if (text.includes(" × ")) return text.replace(" × ", "\n× ");
-        if (text.includes(" ÷ ")) return text.replace(" ÷ ", "\n÷ ");
-    }
-
-    // Fallback: Break after space if too long
+    // If there are spaces, prefer breaking near middle
     if (text.length > 15) {
         const mid = Math.floor(text.length / 2);
         const spaceIdx = text.lastIndexOf(' ', mid);
@@ -100,14 +111,87 @@ function formatQuestionText(text) {
             return text.substring(0, spaceIdx) + '\n' + text.substring(spaceIdx + 1);
         }
     }
-
     return text;
 }
 
-// Normalize value for comparison (Grade 5 decimals vs integers)
+// Normalize value for comparison (decimals vs integers)
 function normalize(v) {
     if (Number.isInteger(v)) return v.toString();
-    return v.toFixed(1);
+    // Keep 1 decimal for stable comparisons (used for Grade 5/6 if needed)
+    return Number(v).toFixed(1);
+}
+
+function clampScore() {
+    if (state.score < 0) state.score = 0;
+}
+
+// --- NEW: hard reset to Sansuu Home (start overlay) ---
+function goToSansuuHome() {
+    // Stop game safely
+    state.isPlaying = false;
+    state.isPaused = false;
+    stopBGM();
+
+    // Reset transient state
+    state.balloons = [];
+    state.spawnTimer = 0;
+    state.combo = 0;
+    state.timeLeft = CONFIG.gameDuration;
+
+    // Restore overlays
+    overlayGameOver.classList.add('hidden');
+    overlaySettings.classList.add('hidden');
+    overlayStart.classList.remove('hidden');
+
+    // UI refresh (keep high score)
+    uiTime.innerText = Math.ceil(state.timeLeft);
+    uiScore.innerText = state.score;
+    uiHighScore.innerText = state.highScore;
+    updateCombo(0);
+
+    // Clear feedback if showing
+    if (feedbackLayer) feedbackLayer.classList.add('hidden');
+}
+
+// --- NEW: attach home/back handlers robustly (no HTML edits required) ---
+function wireHomeButtons() {
+    const candidates = [];
+
+    // Known IDs (if they exist)
+    const ids = [
+        'home-btn', 'btn-home', 'home', 'to-home', 'to-home-btn',
+        'back-btn', 'btn-back', 'back', 'quit-btn', 'end-btn', 'finish-btn',
+        'close-btn', 'return-btn'
+    ];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) candidates.push(el);
+    });
+
+    // Also scan buttons/links by label (Japanese)
+    document.querySelectorAll('button, a').forEach(el => {
+        const t = (el.textContent || '').trim();
+        if (!t) return;
+        if (t === 'ホーム' || t === 'もどる' || t === '戻る' || t === 'おわる' || t === '終了') {
+            candidates.push(el);
+        }
+    });
+
+    // De-dup
+    const unique = Array.from(new Set(candidates));
+
+    unique.forEach(el => {
+        // Avoid double binding
+        if (el.__kitannonHomeBound) return;
+        el.__kitannonHomeBound = true;
+
+        el.addEventListener('click', (e) => {
+            // If element is a link, prevent navigation (we want overlay-home)
+            e.preventDefault();
+            e.stopPropagation();
+            goToSansuuHome();
+        }, { passive: false });
+    });
 }
 
 // --- Initialization ---
@@ -137,17 +221,27 @@ function init() {
     }
 
     // Settings UI
-    document.getElementById('settings-open-btn').addEventListener('click', openSettings);
-    document.getElementById('settings-close-btn').addEventListener('click', closeSettings);
+    const openBtn = document.getElementById('settings-open-btn');
+    const closeBtn = document.getElementById('settings-close-btn');
 
-    // Also allow closing by clicking the overlay background (optional but good UX)
-    overlaySettings.addEventListener('click', (e) => {
-        if (e.target === overlaySettings) closeSettings();
-    });
+    // NOTE: If in-game settings button is broken, user requested removal earlier.
+    // We will not rely on it; but if it exists and works, keep it.
+    if (openBtn) openBtn.addEventListener('click', openSettings);
+    if (closeBtn) closeBtn.addEventListener('click', closeSettings);
+
+    if (overlaySettings) {
+        overlaySettings.addEventListener('click', (e) => {
+            if (e.target === overlaySettings) closeSettings();
+        });
+    }
 
     loadSettingsUI();
 
     uiHighScore.innerText = state.highScore;
+
+    // NEW: Always wire home/back/finish buttons to return to Sansuu home overlay
+    wireHomeButtons();
+
     requestAnimationFrame(gameLoop);
 }
 
@@ -162,8 +256,15 @@ function handleResize() {
 }
 
 function loadSettingsUI() {
-    document.getElementById(state.settings.speed === 'slow' ? 'speed-slow' : 'speed-normal').checked = true;
-    document.getElementById('low-grade-mode').checked = state.settings.lowGrade;
+    const speedSlow = document.getElementById('speed-slow');
+    const speedNormal = document.getElementById('speed-normal');
+    if (speedSlow && speedNormal) {
+        (state.settings.speed === 'slow' ? speedSlow : speedNormal).checked = true;
+    }
+
+    const lowGradeMode = document.getElementById('low-grade-mode');
+    if (lowGradeMode) lowGradeMode.checked = state.settings.lowGrade;
+
     const soundToggleSet = document.getElementById('sound-toggle-settings');
     const soundToggleStart = document.getElementById('sound-toggle-start');
     if (soundToggleSet) soundToggleSet.checked = state.settings.sound;
@@ -171,21 +272,26 @@ function loadSettingsUI() {
 }
 
 function saveSettings() {
-    if (document.getElementById('speed-slow').checked) state.settings.speed = 'slow';
+    const speedSlow = document.getElementById('speed-slow');
+    if (speedSlow && speedSlow.checked) state.settings.speed = 'slow';
     else state.settings.speed = 'normal';
 
-    state.settings.lowGrade = document.getElementById('low-grade-mode').checked;
+    const lowGradeMode = document.getElementById('low-grade-mode');
+    if (lowGradeMode) state.settings.lowGrade = lowGradeMode.checked;
 
-    const soundOn = document.getElementById('sound-toggle-settings').checked;
+    const soundSet = document.getElementById('sound-toggle-settings');
+    const soundStart = document.getElementById('sound-toggle-start');
+
+    const soundOn = soundSet ? soundSet.checked : state.settings.sound;
     const wasSoundOn = state.settings.sound;
     state.settings.sound = soundOn;
-    document.getElementById('sound-toggle-start').checked = soundOn;
+    if (soundStart) soundStart.checked = soundOn;
 
     localStorage.setItem('kitannon_math_speed', state.settings.speed);
     localStorage.setItem('kitannon_math_lowgrade', state.settings.lowGrade);
     localStorage.setItem('kitannon_math_sound', state.settings.sound);
 
-    // Update logic to handle Start/Stop audio based on new setting
+    // Handle audio
     if (wasSoundOn && !soundOn) {
         stopBGM();
     } else if (!wasSoundOn && soundOn && state.isPlaying && !state.isPaused) {
@@ -197,18 +303,18 @@ function saveSettings() {
 
 function openSettings() {
     state.isPaused = true;
-    overlaySettings.classList.remove('hidden');
+    if (overlaySettings) overlaySettings.classList.remove('hidden');
     stopBGM();
 }
 
 function closeSettings() {
-    overlaySettings.classList.add('hidden');
+    if (overlaySettings) overlaySettings.classList.add('hidden');
     saveSettings();
 
     // Resume Game
     if (state.isPlaying) {
         state.isPaused = false;
-        state.lastTime = performance.now(); // Reset delta time to prevent jump
+        state.lastTime = performance.now();
         if (state.settings.sound) startBGM();
     }
 }
@@ -218,7 +324,7 @@ function startGame() {
     if (startToggle) state.settings.sound = startToggle.checked;
     saveSettings();
 
-    initAudio(); // Resume/Create Audio Context
+    initAudio();
 
     state.isPlaying = true;
     state.isPaused = false;
@@ -239,7 +345,6 @@ function startGame() {
 
     playSound('start');
 
-    // Start BGM with slight delay
     setTimeout(() => {
         if (state.isPlaying && !state.isPaused) startBGM();
     }, 500);
@@ -263,95 +368,205 @@ function gameOver() {
 
     overlayGameOver.classList.remove('hidden');
     playSound('finish');
+
+    // Ensure "ホーム/もどる/おわる" buttons inside this overlay are wired
+    wireHomeButtons();
 }
 
+/**
+ * (A) Difficulty design by grade (question generation)
+ * 1: single-digit addition, fewer carry
+ * 2: two-digit add/sub with carry/borrow, result >= 0
+ * 3: multiplication only (2–9)
+ * 4: division exact + occasional short word problems (not too hard)
+ * 5: decimals mix: + / - (1 decimal) and ×/÷ with integer; answers 1 decimal
+ * 6: speed/time/distance word problems WITHOUT ×/÷ symbols; avoid easy patterns, but not too harsh
+ */
 function generateQuestion() {
     const g = state.settings.grade;
     let text = "";
     let ans = 0;
 
+    // --- helpers ---
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const oneDecimal = (n) => Number(n).toFixed(1);
+
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
     if (g === 1) {
-        const a = Math.floor(Math.random() * 9) + 1;
-        const b = Math.floor(Math.random() * 9) + 1;
+        // 1–9 + 1–9, avoid too many carry cases
+        let a = randInt(1, 9);
+        let b = randInt(1, 9);
+        // 70%: no carry, 30%: allow carry
+        if (Math.random() < 0.7) {
+            while (a + b >= 10) {
+                a = randInt(1, 9);
+                b = randInt(1, 9);
+            }
+        }
         ans = a + b;
         text = `${a} + ${b} = ?`;
     }
     else if (g === 2) {
-        const a = Math.floor(Math.random() * 41) + 10;
-        const b = Math.floor(Math.random() * 31) + 10;
-        ans = a + b;
-        text = `${a} + ${b} = ?`;
+        // Two-digit add/sub, include carry/borrow, keep result >= 0
+        const isAdd = Math.random() < 0.5;
+        let a = randInt(10, 99);
+        let b = randInt(10, 99);
+
+        if (isAdd) {
+            ans = a + b;
+            text = `${a} + ${b} = ?`;
+        } else {
+            // ensure a >= b
+            if (b > a) [a, b] = [b, a];
+            ans = a - b;
+            text = `${a} - ${b} = ?`;
+        }
     }
     else if (g === 3) {
-        const a = Math.floor(Math.random() * 8) + 2;
-        const b = Math.floor(Math.random() * 8) + 2;
+        // Multiplication only (2–9)
+        const a = randInt(2, 9);
+        const b = randInt(2, 9);
         ans = a * b;
         text = `${a} × ${b} = ?`;
     }
     else if (g === 4) {
-        const divisor = Math.floor(Math.random() * 8) + 2;
-        ans = Math.floor(Math.random() * 8) + 2;
-        const dividend = ans * divisor;
-        text = `${dividend} ÷ ${divisor} = ?`;
+        // Exact division, sometimes short word problem (light)
+        const divisor = randInt(2, 9);
+        const quotient = randInt(2, 12);
+        const dividend = divisor * quotient;
+
+        if (Math.random() < 0.35) {
+            // short word problem (still easy)
+            // Example: "24こを 6人で わける。1人は なんこ？"
+            text = `${dividend}こを ${divisor}人で わける。\n1人は なんこ？`;
+            ans = quotient;
+        } else {
+            text = `${dividend} ÷ ${divisor} = ?`;
+            ans = quotient;
+        }
     }
     else if (g === 5) {
-        const a = (Math.floor(Math.random() * 9) + 1) / 10;
-        const b = (Math.floor(Math.random() * 9) + 1) / 10;
-        ans = Math.round((a + b) * 10) / 10;
-        text = `${a} + ${b} = ?`;
+        // Decimals harder than simple + only, but not brutal
+        // Mix:
+        // - decimal +/-
+        // - decimal × int
+        // - divisible decimal ÷ int
+        const mode = randInt(0, 2);
+
+        if (mode === 0) {
+            // decimal add/sub (1 decimal), keep >= 0 for subtraction
+            let a = randInt(10, 99) / 10; // 1.0 - 9.9
+            let b = randInt(10, 99) / 10;
+            const isAdd = Math.random() < 0.5;
+
+            if (isAdd) {
+                ans = Number((a + b).toFixed(1));
+                text = `${oneDecimal(a)} + ${oneDecimal(b)} = ?`;
+            } else {
+                if (b > a) [a, b] = [b, a];
+                ans = Number((a - b).toFixed(1));
+                text = `${oneDecimal(a)} - ${oneDecimal(b)} = ?`;
+            }
+        } else if (mode === 1) {
+            // decimal × integer, answer 1 decimal
+            const a = randInt(10, 99) / 10; // 1.0 - 9.9
+            const b = randInt(2, 9);
+            ans = Number((a * b).toFixed(1));
+            text = `${oneDecimal(a)} × ${b} = ?`;
+        } else {
+            // divisible decimal ÷ integer, keep 1 decimal answer
+            const b = randInt(2, 9);
+            const q = randInt(10, 99) / 10; // quotient 1.0 - 9.9
+            const a = Number((q * b).toFixed(1)); // dividend as 1 decimal
+            ans = Number(q.toFixed(1));
+            text = `${oneDecimal(a)} ÷ ${b} = ?`;
+        }
     }
     else if (g === 6) {
-        // 6年：速さ（やさしめ版）
-        // ねらい：5年より難しいが、計算が重すぎないように調整
-        // - 分を使う（抜け道潰しは継続）
-        // - 距離は整数kmになる組み合わせにする（小数は使わない）
-        // - 速さは5km刻み、時間は10分刻み
-        // - × ÷ 記号は出さない（文章から考える）
+        // Speed/time/distance word problems WITHOUT × or ÷ symbols
+        // Easier than previous harsh version, but avoids "multiples of 10 exploit"
+        // - Use minutes sometimes
+        // - Use speeds not only multiples of 10 (even numbers like 28, 34, 42, 56...)
+        // - Keep answers integer (or simple), questions short Japanese sentences
 
-        const rInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-        const type = rInt(1, 3);
+        const type = randInt(0, 2);
 
-        // speed: 25..80 step 5
-        const speed = rInt(5, 16) * 5;
+        // time in minutes: 30, 45, 60, 90, 120
+        // But ensure distance becomes integer easily:
+        // - 30, 60, 90, 120 are safe with even speeds (90 -> 1.5h, even speed => integer distance)
+        // - 45 can make .75h (needs speed multiple of 4 to keep integer distance). We'll use it rarely.
+        const timeChoices = (Math.random() < 0.2)
+            ? [45] // rare
+            : [30, 60, 90, 120];
 
-        // minutes: 20..120 step 10
-        let minutes = rInt(2, 12) * 10;
+        const minutes = pick(timeChoices);
 
-        // distKm = speed * (minutes/60) が整数になるように minutes を選ぶ
-        // つまり (speed * minutes) が 60 の倍数
-        let tries = 0;
-        while (((speed * minutes) % 60) !== 0 && tries < 25) {
-            minutes = rInt(2, 12) * 10;
-            tries++;
+        // speed candidates: even, not forced to be multiples of 10
+        // Keep within kid-friendly range
+        const speedChoices = [24, 28, 32, 34, 36, 42, 46, 48, 52, 54, 56, 62, 64, 68, 72, 74];
+        let speed = pick(speedChoices);
+
+        // if minutes == 45, require speed multiple of 4 for integer distance (0.75h)
+        if (minutes === 45) {
+            const speed45 = speedChoices.filter(s => s % 4 === 0);
+            speed = pick(speed45);
         }
 
-        const dist = (speed * minutes) / 60; // 整数kmの想定
+        // compute distance (km) as integer
+        const hours = minutes / 60; // 0.5, 0.75, 1, 1.5, 2
+        const dist = Math.round(speed * hours); // should be integer by construction
 
-        if (type === 1) {
-            // 距離を求める
-            text = `時速${speed}kmで${minutes}分進む。\n何km進む？`;
+        // Build short sentences, no × ÷ signs
+        if (type === 0) {
+            // speed + time -> distance
+            text = `時速${speed}kmで${minutes}分走る。\n何km？`;
             ans = dist;
-        } else if (type === 2) {
-            // 速さを求める
-            text = `${dist}kmを${minutes}分で進む。\n時速は何km？`;
+        } else if (type === 1) {
+            // distance + time -> speed
+            text = `${dist}kmを${minutes}分で走った。\n時速は？`;
+            // speed = dist / hours
             ans = speed;
         } else {
-            // 時間(分)を求める
-            text = `${dist}kmを時速${speed}kmで進む。\n何分かかる？`;
+            // distance + speed -> time (minutes)
+            text = `${dist}kmを時速${speed}kmで走る。\n何分？`;
             ans = minutes;
         }
     }
 
     state.question = { text, ans };
-    // Use formatQuestionText for display
+
+    // Display (keep wrapping logic)
     uiQuestion.innerText = formatQuestionText(text);
 
-    spawnBalloon(true);
+    // (A) IMPORTANT: Reset balloons at question switch to avoid stale taps
+    resetBalloonsForNewQuestion();
+}
+
+function resetBalloonsForNewQuestion() {
+    state.balloons = [];
+
+    const mobile = isMobile();
+    const count = mobile ? CONFIG.initialBalloonsMobile : CONFIG.initialBalloonsPC;
+
+    // Spawn a small batch immediately:
+    // - Exactly 1 correct balloon
+    // - Others wrong
+    // - Correct position randomized by order
+    const correctIndex = Math.floor(Math.random() * count);
+
+    for (let i = 0; i < count; i++) {
+        state.balloons.push(new Balloon(i === correctIndex));
+    }
+
+    // Reset spawn timer so next spawns feel consistent
+    state.spawnTimer = 0;
 }
 
 function updateScore(points) {
     state.score += points;
-    if (state.score < 0) state.score = 0;
+    clampScore();
     uiScore.innerText = state.score;
 }
 
@@ -364,6 +579,9 @@ function updateCombo(count) {
         uiCombo.classList.remove('animate');
         void uiCombo.offsetWidth; // Reflow
         uiCombo.classList.add('animate');
+    } else {
+        // Hide when not in combo
+        uiCombo.classList.add('hidden');
     }
 }
 
@@ -383,21 +601,26 @@ class Balloon {
             const ans = state.question.ans;
             const isFloat = !Number.isInteger(ans);
             let attempts = 0;
+
             do {
                 attempts++;
+
                 if (isFloat) {
-                    const noise = (Math.floor(Math.random() * 10) - 5) / 10;
-                    wrong = Math.round((ans + noise) * 10) / 10;
-                    if (wrong <= 0.1) wrong = 0.1;
+                    // keep 1 decimal wrong options around ans
+                    const noise = (Math.floor(Math.random() * 9) - 4) / 10; // -0.4..+0.4
+                    wrong = Number((Number(ans) + noise).toFixed(1));
+                    // avoid negative / zero issues
+                    if (wrong <= 0) wrong = 0.1;
                 } else {
-                    const range = Math.max(5, Math.floor(ans * 0.2));
-                    const noise = Math.floor(Math.random() * (range * 2)) - range;
+                    // integer wrong options
+                    const baseRange = Math.max(5, Math.floor(Math.abs(ans) * 0.2));
+                    const noise = Math.floor(Math.random() * (baseRange * 2 + 1)) - baseRange;
                     wrong = ans + noise;
                     if (wrong < 0) wrong = 0;
                 }
-            } while ((wrong === ans || wrong < 0) && attempts < 10);
+            } while ((normalize(wrong) === normalize(ans)) && attempts < 12);
 
-            if (attempts >= 10) wrong = ans + 1;
+            if (attempts >= 12) wrong = isFloat ? Number((Number(ans) + 0.1).toFixed(1)) : (ans + 1);
 
             this.value = wrong;
         }
@@ -436,7 +659,7 @@ class Balloon {
         ctx.fill();
 
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${this.radius * 0.7}px sans-serif`; // Scale font with radius
+        ctx.font = `bold ${this.radius * 0.7}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.value, this.x, this.y + 2);
@@ -457,7 +680,6 @@ class Balloon {
         const dx = px - this.x;
         const dy = py - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        // Generous hit area
         return dist < (this.radius + CONFIG.hitRadiusExpand);
     }
 }
@@ -492,23 +714,23 @@ function update(dt) {
     state.timeLeft -= dt;
     if (state.timeLeft <= 0) {
         state.timeLeft = 0;
-        gameOver();
         uiTime.innerText = "0";
+        gameOver();
         return;
     }
     uiTime.innerText = Math.ceil(state.timeLeft);
 
     state.spawnTimer += dt;
 
-    // Dynamic interval check based on device
     const interval = isMobile() ? CONFIG.spawnIntervalMobile : CONFIG.spawnIntervalPC;
 
     if (state.spawnTimer > interval) {
         state.spawnTimer = 0;
         spawnBalloon();
 
+        // Ensure at least one correct balloon exists (playability)
         const hasCorrect = state.balloons.some(b => b.isCorrect);
-        if (!hasCorrect && state.balloons.length < 3) { // Ensure playability
+        if (!hasCorrect && state.balloons.length < 3) {
             spawnBalloon(true);
         }
     }
@@ -569,26 +791,33 @@ function handleHit(index) {
     const balloon = state.balloons[index];
     state.balloons.splice(index, 1);
 
-    // Dynamic correctness check
     const valStr = normalize(balloon.value);
     const ansStr = normalize(state.question.ans);
     const isCorrect = (valStr === ansStr);
 
+    const g = state.settings.grade;
+    const correctBase = SCORE_TABLE.correct[g] || 10;
+    const wrongBase = SCORE_TABLE.wrong[g] || 5;
+
     if (isCorrect) {
         playSound('correct');
         showCharFeedback('correct');
-        const comboBonus = Math.min(state.combo * 5, 50);
-        updateScore(10 + comboBonus);
+
+        // Keep combo rules, but grade-scaled base points
+        // Combo bonus: gentle (so game doesn’t explode), still rewarding
+        const comboBonus = Math.min(state.combo * 2, 20); // was up to 50; too big
+        updateScore(correctBase + comboBonus);
+
         updateCombo(state.combo + 1);
-        if (state.combo > 1) {
-            playSound('combo');
-        }
+        if (state.combo > 1) playSound('combo');
+
         generateQuestion();
     } else {
         playSound('wrong');
         showCharFeedback('wrong');
+
         if (!state.settings.lowGrade) {
-            updateScore(-5);
+            updateScore(-wrongBase);
         }
         updateCombo(0);
     }
@@ -625,11 +854,9 @@ const NOTES = {
     'C5': 523.25
 };
 
-// Retro Chiptune Composition
 const BPM = 120;
 const BEAT = 60 / BPM;
 
-// Melody: distinct, happy, repeating phrase
 const MELODY_SEQ = [
     { n: 'C4', d: 0.5 }, { n: 'E4', d: 0.5 }, { n: 'G4', d: 0.5 }, { n: 'E4', d: 0.5 },
     { n: 'F4', d: 0.5 }, { n: 'A4', d: 0.5 }, { n: 'G4', d: 1.0 },
@@ -637,7 +864,6 @@ const MELODY_SEQ = [
     { n: 'F4', d: 0.5 }, { n: 'D4', d: 0.5 }, { n: 'C4', d: 1.0 }
 ];
 
-// Bass: Simple root steps
 const BASS_SEQ = [
     { n: 'C3', d: 2.0 },
     { n: 'G3', d: 2.0 },
@@ -738,8 +964,8 @@ function playSound(type) {
 
     if (type === 'correct') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
@@ -771,10 +997,10 @@ function playSound(type) {
 
     } else if (type === 'finish') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(523.25, now);
         osc.frequency.setValueAtTime(523.25, now + 0.1);
         osc.frequency.setValueAtTime(523.25, now + 0.2);
-        osc.frequency.setValueAtTime(659.25, now + 0.4); // E5
+        osc.frequency.setValueAtTime(659.25, now + 0.4);
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.setValueAtTime(0.1, now + 0.3);
