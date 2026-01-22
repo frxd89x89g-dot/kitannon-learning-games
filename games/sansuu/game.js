@@ -32,6 +32,12 @@ const CONFIG = {
     gameDuration: 60, // Seconds
 };
 
+// --- Scoring Tables (grade-scaled) ---
+const SCORE = {
+    correct: { 1: 8, 2: 10, 3: 12, 4: 14, 5: 16, 6: 20 },
+    wrong:   { 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 8 },
+};
+
 // --- State Management ---
 const state = {
     isPlaying: false,
@@ -82,30 +88,14 @@ function isMobile() {
 // Format text for better readability on small screens
 function formatQuestionText(text) {
     if (!isMobile()) return text;
-    if (text.length < 12) return text; // Short questions are fine
-
-    // Logic for breaking long questions (e.g. Grade 6)
-    // 1. Break before "×", "÷" 
-    // 2. Break after "時間" if followed by "="
-    // 3. Break before "="
-
-    // For Grade 6 math "時速60km × 2時間 = ?"
-    // Keep numbers and units together if possible.
-
-    // Simple heuristic: Splitting at the operator for clear 2-line layout
-    // Replace " × " with "\n× " to wrap nicely
-    // Replace " ÷ " with "\n÷ "
-
-    // If manual newlines exist (Grade 6), respect them
+    if (text.length < 12) return text;
     if (text.includes('\n')) return text;
 
     if (text.includes(" =")) {
-        // ... (rest of logic for other grades)
         if (text.includes(" × ")) return text.replace(" × ", "\n× ");
         if (text.includes(" ÷ ")) return text.replace(" ÷ ", "\n÷ ");
     }
 
-    // Fallback: Break after space if too long
     if (text.length > 15) {
         const mid = Math.floor(text.length / 2);
         const spaceIdx = text.lastIndexOf(' ', mid);
@@ -117,10 +107,17 @@ function formatQuestionText(text) {
     return text;
 }
 
-// Normalize value for comparison (Grade 5 decimals vs integers)
+// Normalize value for comparison (Decimals vs integers)
 function normalize(v) {
     if (Number.isInteger(v)) return v.toString();
     return v.toFixed(1);
+}
+
+function rInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function round1(v) {
+    return Math.round(v * 10) / 10;
 }
 
 // --- Initialization ---
@@ -139,7 +136,6 @@ function init() {
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('retry-btn').addEventListener('click', resetGame);
 
-
     // Grade Selector
     const gradeSelect = document.getElementById('grade-select');
     if (gradeSelect) {
@@ -154,7 +150,6 @@ function init() {
     document.getElementById('settings-open-btn').addEventListener('click', openSettings);
     document.getElementById('settings-close-btn').addEventListener('click', closeSettings);
 
-    // Also allow closing by clicking the overlay background (optional but good UX)
     overlaySettings.addEventListener('click', (e) => {
         if (e.target === overlaySettings) closeSettings();
     });
@@ -199,7 +194,6 @@ function saveSettings() {
     localStorage.setItem('kitannon_math_lowgrade', state.settings.lowGrade);
     localStorage.setItem('kitannon_math_sound', state.settings.sound);
 
-    // Update logic to handle Start/Stop audio based on new setting
     if (wasSoundOn && !soundOn) {
         stopBGM();
     } else if (!wasSoundOn && soundOn && state.isPlaying && !state.isPaused) {
@@ -208,7 +202,6 @@ function saveSettings() {
 }
 
 // --- Game Logic ---
-
 function openSettings() {
     state.isPaused = true;
     overlaySettings.classList.remove('hidden');
@@ -219,22 +212,19 @@ function closeSettings() {
     overlaySettings.classList.add('hidden');
     saveSettings();
 
-    // Resume Game
     if (state.isPlaying) {
         state.isPaused = false;
-        state.lastTime = performance.now(); // Reset delta time to prevent jump
+        state.lastTime = performance.now();
         if (state.settings.sound) startBGM();
     }
 }
-
-// --- Game Logic ---
 
 function startGame() {
     const startToggle = document.getElementById('sound-toggle-start');
     if (startToggle) state.settings.sound = startToggle.checked;
     saveSettings();
 
-    initAudio(); // Resume/Create Audio Context
+    initAudio();
 
     state.isPlaying = true;
     state.isPaused = false;
@@ -255,7 +245,6 @@ function startGame() {
 
     playSound('start');
 
-    // Start BGM with slight delay
     setTimeout(() => {
         if (state.isPlaying && !state.isPaused) startBGM();
     }, 500);
@@ -281,70 +270,175 @@ function gameOver() {
     playSound('finish');
 }
 
+/**
+ * Spawn initial balloons for a new question:
+ * - Reset on-screen balloons (prevents "previous answer remains" bug)
+ * - Make first balloon NOT always correct: spawn 1 correct + 1 wrong in random order
+ */
+function spawnInitialBalloons() {
+    state.balloons = [];
+    if (Math.random() < 0.5) {
+        spawnBalloon(false);
+        spawnBalloon(true);
+    } else {
+        spawnBalloon(true);
+        spawnBalloon(false);
+    }
+}
+
+/**
+ * Grade difficulty tiers:
+ * 1: single-digit addition (fewer hard carry)
+ * 2: two-digit add/sub (with carry/borrow)
+ * 3: multiplication only
+ * 4: division (exact) + easy word problem low rate
+ * 5: decimals (1dp) add/sub + occasional (decimal×int) or (decimal÷int) to 1dp
+ * 6: speed/time/distance word problems (no × ÷ shown), minutes + varied speeds (avoid exploit)
+ */
 function generateQuestion() {
     const g = state.settings.grade;
     let text = "";
     let ans = 0;
 
     if (g === 1) {
-        const a = Math.floor(Math.random() * 9) + 1;
-        const b = Math.floor(Math.random() * 9) + 1;
+        // Prefer non-carry to keep it friendly
+        let a = rInt(1, 9);
+        let b = rInt(1, 9);
+        if (Math.random() < 0.65) {
+            // try to keep a+b <= 9
+            a = rInt(1, 8);
+            b = rInt(1, 9 - a);
+        }
         ans = a + b;
         text = `${a} + ${b} = ?`;
     }
     else if (g === 2) {
-        const a = Math.floor(Math.random() * 41) + 10;
-        const b = Math.floor(Math.random() * 31) + 10;
-        ans = a + b;
-        text = `${a} + ${b} = ?`;
+        const isSub = Math.random() < 0.5;
+        if (!isSub) {
+            // two-digit addition with carry often
+            let a10 = rInt(10, 99);
+            let b10 = rInt(10, 99);
+            if (Math.random() < 0.6) {
+                // force carry on ones digit
+                const aOnes = rInt(5, 9);
+                const bOnes = rInt(10 - aOnes, 9);
+                const aTens = rInt(1, 9);
+                const bTens = rInt(1, 9);
+                a10 = aTens * 10 + aOnes;
+                b10 = bTens * 10 + bOnes;
+            }
+            ans = a10 + b10;
+            text = `${a10} + ${b10} = ?`;
+        } else {
+            // two-digit subtraction with borrow often, result >= 0
+            let a10 = rInt(10, 99);
+            let b10 = rInt(10, 99);
+            if (b10 > a10) [a10, b10] = [b10, a10];
+
+            if (Math.random() < 0.6) {
+                // force borrow (ones of a < ones of b)
+                const aOnes = rInt(0, 4);
+                const bOnes = rInt(aOnes + 1, 9);
+                const aTens = rInt(2, 9);
+                const bTens = rInt(1, aTens); // keep <= aTens
+                a10 = aTens * 10 + aOnes;
+                b10 = bTens * 10 + bOnes;
+                if (b10 > a10) [a10, b10] = [b10, a10];
+            }
+
+            ans = a10 - b10;
+            text = `${a10} - ${b10} = ?`;
+        }
     }
     else if (g === 3) {
-        const a = Math.floor(Math.random() * 8) + 2;
-        const b = Math.floor(Math.random() * 8) + 2;
+        const a = rInt(2, 9);
+        const b = rInt(2, 9);
         ans = a * b;
         text = `${a} × ${b} = ?`;
     }
     else if (g === 4) {
-        const divisor = Math.floor(Math.random() * 8) + 2;
-        ans = Math.floor(Math.random() * 8) + 2;
-        const dividend = ans * divisor;
-        text = `${dividend} ÷ ${divisor} = ?`;
+        if (Math.random() < 0.2) {
+            // easy word problem (division meaning), keep numbers small
+            const divisor = rInt(2, 6);
+            const each = rInt(2, 9);
+            const total = divisor * each;
+            ans = each;
+            text = `${total}こを${divisor}人で同じ数ずつ。\n1人何こ？`;
+        } else {
+            // exact division, slightly wider range than grade 3
+            const divisor = rInt(2, 12);
+            const quotient = rInt(2, 12);
+            const dividend = divisor * quotient;
+            ans = quotient;
+            text = `${dividend} ÷ ${divisor} = ?`;
+        }
     }
     else if (g === 5) {
-        const a = (Math.floor(Math.random() * 9) + 1) / 10;
-        const b = (Math.floor(Math.random() * 9) + 1) / 10;
-        ans = Math.round((a + b) * 10) / 10;
-        text = `${a} + ${b} = ?`;
+        // Mix of:
+        // A) decimal add/sub (1dp)
+        // B) decimal × int
+        // C) decimal ÷ int (divisible to 1dp)
+        const type = rInt(1, 4); // bias toward add/sub
+        if (type === 1 || type === 2) {
+            let a = rInt(5, 99) / 10;  // 0.5 - 9.9
+            let b = rInt(5, 99) / 10;
+            if (type === 1) {
+                ans = round1(a + b);
+                text = `${a.toFixed(1)} + ${b.toFixed(1)} = ?`;
+            } else {
+                if (b > a) [a, b] = [b, a];
+                ans = round1(a - b);
+                text = `${a.toFixed(1)} - ${b.toFixed(1)} = ?`;
+            }
+        } else if (type === 3) {
+            const a = rInt(5, 99) / 10; // 0.5-9.9
+            const m = rInt(2, 9);
+            ans = round1(a * m);
+            text = `${a.toFixed(1)} × ${m} = ?`;
+        } else {
+            // make (a ÷ d) = 1dp exact
+            const d = rInt(2, 9);
+            const q = rInt(5, 99) / 10;      // 0.5-9.9
+            const a = round1(q * d);         // ensures divisible to 1dp
+            ans = q;
+            text = `${a.toFixed(1)} ÷ ${d} = ?`;
+        }
     }
     else if (g === 6) {
-        const type = Math.floor(Math.random() * 3);
-        const time = Math.floor(Math.random() * 4) + 2;
-        const speed = (Math.floor(Math.random() * 6) + 3) * 10;
-        const dist = speed * time;
+        // Speed/Time/Distance word problems WITHOUT showing × or ÷
+        // Use minutes and varied speeds to avoid exploit
+        const type = rInt(1, 3);
 
-        if (type === 0) {
-            // Speed x Time = Distance
-            // "30km/h for 2 hours. Distance?" (~15 chars)
-            text = `時速${speed}kmで${time}時間。\n何km進む？`;
-            ans = dist;
-        } else if (type === 1) {
-            // Distance / Time = Speed
-            // "120km in 2 hours. Speed?" (~15 chars)
-            text = `${dist}kmを${time}時間。\n時速は何km？`;
+        // speed: 12..85 (not only multiples of 10)
+        const speed = rInt(12, 85);
+
+        // time minutes: 15..180 step 5
+        const minutes = rInt(3, 36) * 5;
+        const hours = minutes / 60;
+
+        // distance in km (keep 0.1 precision)
+        const distKm = round1(speed * hours);
+
+        if (type === 1) {
+            // Ask distance
+            ans = distKm;
+            text = `時速${speed}kmで${minutes}分進む。\n何km進む？`;
+        } else if (type === 2) {
+            // Ask speed (avoid giving away: use km and minutes)
             ans = speed;
+            text = `${distKm.toFixed(1)}kmを${minutes}分で進む。\n時速は何km？`;
         } else {
-            // Distance / Speed = Time
-            // "120km at 60km/h. Time?" (~15 chars)
-            text = `${dist}kmを時速${speed}km。\n何時間かかる？`;
-            ans = time;
+            // Ask time in minutes (make it match our minutes so answer is integer)
+            ans = minutes;
+            text = `${distKm.toFixed(1)}kmを時速${speed}kmで進む。\n何分かかる？`;
         }
     }
 
     state.question = { text, ans };
-    // Use formatQuestionText for display
     uiQuestion.innerText = formatQuestionText(text);
 
-    spawnBalloon(true);
+    // IMPORTANT: reset balloons for new question (A方針) + avoid "first always correct"
+    spawnInitialBalloons();
 }
 
 function updateScore(points) {
@@ -434,7 +528,7 @@ class Balloon {
         ctx.fill();
 
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${this.radius * 0.7}px sans-serif`; // Scale font with radius
+        ctx.font = `bold ${this.radius * 0.7}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.value, this.x, this.y + 2);
@@ -455,7 +549,6 @@ class Balloon {
         const dx = px - this.x;
         const dy = py - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        // Generous hit area
         return dist < (this.radius + CONFIG.hitRadiusExpand);
     }
 }
@@ -498,7 +591,6 @@ function update(dt) {
 
     state.spawnTimer += dt;
 
-    // Dynamic interval check based on device
     const interval = isMobile() ? CONFIG.spawnIntervalMobile : CONFIG.spawnIntervalPC;
 
     if (state.spawnTimer > interval) {
@@ -506,7 +598,7 @@ function update(dt) {
         spawnBalloon();
 
         const hasCorrect = state.balloons.some(b => b.isCorrect);
-        if (!hasCorrect && state.balloons.length < 3) { // Ensure playability
+        if (!hasCorrect && state.balloons.length < 3) {
             spawnBalloon(true);
         }
     }
@@ -567,27 +659,32 @@ function handleHit(index) {
     const balloon = state.balloons[index];
     state.balloons.splice(index, 1);
 
-    // Dynamic correctness check
     const valStr = normalize(balloon.value);
     const ansStr = normalize(state.question.ans);
     const isCorrect = (valStr === ansStr);
 
+    const g = state.settings.grade;
+
     if (isCorrect) {
         playSound('correct');
         showCharFeedback('correct');
+
+        // Grade-based base + existing combo bonus behavior
+        const base = SCORE.correct[g];
         const comboBonus = Math.min(state.combo * 5, 50);
-        updateScore(10 + comboBonus);
+        updateScore(base + comboBonus);
+
         updateCombo(state.combo + 1);
-        if (state.combo > 1) {
-            playSound('combo');
-        }
+        if (state.combo > 1) playSound('combo');
+
         generateQuestion();
     } else {
         playSound('wrong');
         showCharFeedback('wrong');
-        if (!state.settings.lowGrade) {
-            updateScore(-5);
-        }
+
+        const penalty = state.settings.lowGrade ? 0 : SCORE.wrong[g];
+        updateScore(-penalty);
+
         updateCombo(0);
     }
 }
@@ -621,35 +718,22 @@ const NOTES = {
     'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
     'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
     'C5': 523.25
-    // Add more if needed
 };
 
-// Retro Chiptune Composition
-// Tempo: 120 BPM => 0.5s per beat
 const BPM = 120;
 const BEAT = 60 / BPM;
 
-// Melody: distinct, happy, repeating phrase
 const MELODY_SEQ = [
-    // Bar 1
     { n: 'C4', d: 0.5 }, { n: 'E4', d: 0.5 }, { n: 'G4', d: 0.5 }, { n: 'E4', d: 0.5 },
-    // Bar 2
     { n: 'F4', d: 0.5 }, { n: 'A4', d: 0.5 }, { n: 'G4', d: 1.0 },
-    // Bar 3
     { n: 'E4', d: 0.5 }, { n: 'G4', d: 0.5 }, { n: 'C5', d: 0.5 }, { n: 'G4', d: 0.5 },
-    // Bar 4
     { n: 'F4', d: 0.5 }, { n: 'D4', d: 0.5 }, { n: 'C4', d: 1.0 }
 ];
 
-// Bass: Simple root steps
 const BASS_SEQ = [
-    // Bar 1 (C)
     { n: 'C3', d: 2.0 },
-    // Bar 2 (F -> G?) Let's do G for simplicity or F for variety. Let's do G3.
     { n: 'G3', d: 2.0 },
-    // Bar 3 (C)
     { n: 'C3', d: 2.0 },
-    // Bar 4 (G)
     { n: 'G3', d: 2.0 }
 ];
 
@@ -660,11 +744,6 @@ let bassNextTime = 0;
 
 function startBGM() {
     if (!state.settings.sound || !audioCtx) return;
-    // Don't restart if already playing (logic handled by caller usually, but good to be safe)
-    // Actually, here we normally want to restart sequence if called fresh.
-    // But if we just want to ensure it's running, check state? 
-    // For this game, startBGM is called on StartGame and ToggleUnpause. 
-    // Safe to reset sequence to keep it synced.
     stopBGM();
 
     nextNoteTime = audioCtx.currentTime + 0.1;
@@ -682,11 +761,6 @@ function stopBGM() {
     }
     bgmNodes.forEach(n => {
         try {
-            // Ramp down quickly to avoid clicks on stop
-            const t = audioCtx.currentTime;
-            // Access gain node if possible? modifying array to store objects {osc, gain} is better
-            // but for now just hard stop is acceptable if we can't ramp, 
-            // sound will stop anyway. 
             n.stop();
             n.disconnect();
         } catch (e) { }
@@ -700,20 +774,15 @@ function scheduleNextNote() {
     const lookahead = 0.1;
     const now = audioCtx.currentTime;
 
-    // Schedule Melody
     while (nextNoteTime < now + lookahead) {
         const item = MELODY_SEQ[noteIndex];
-        // Use Triangle/Square for Retro lead
         if (item.n) playTone(item.n, nextNoteTime, item.d * BEAT, 'square', 0.03);
         nextNoteTime += item.d * BEAT;
         noteIndex = (noteIndex + 1) % MELODY_SEQ.length;
     }
 
-    // Schedule Bass
     while (bassNextTime < now + lookahead) {
         const item = BASS_SEQ[bassIndex];
-        // Square or Triangle for bass, filtered? Or just Sine/Triangle. 
-        // User requested Sine or Triangle.
         if (item.n) playTone(item.n, bassNextTime, item.d * BEAT, 'triangle', 0.05);
         bassNextTime += item.d * BEAT;
         bassIndex = (bassIndex + 1) % BASS_SEQ.length;
@@ -730,19 +799,12 @@ function playTone(noteName, time, duration, type, vol) {
     osc.type = type;
     osc.frequency.value = NOTES[noteName];
 
-    // Envelope: Short Attack, Sustain, Gentle Release
-    // To be "gentle", release should be significant relative to duration, 
-    // but not overlap too much if not polyphonic.
     const attack = 0.02;
-    const release = 0.15; // Increased from 0.05
-
-    // Ensure duration is at least attack + release
+    const release = 0.15;
     const effectiveDur = Math.max(duration, attack + release);
 
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(vol, time + attack);
-
-    // Sustain until release start
     gain.gain.setValueAtTime(vol, time + effectiveDur - release);
     gain.gain.linearRampToValueAtTime(0, time + effectiveDur);
 
@@ -750,12 +812,9 @@ function playTone(noteName, time, duration, type, vol) {
     gain.connect(audioCtx.destination);
 
     osc.start(time);
-    osc.stop(time + effectiveDur + 0.1); // Extra buffer for cleanup
+    osc.stop(time + effectiveDur + 0.1);
 
     bgmNodes.push(osc);
-
-    // Cleanup reference after it finishes
-    // (Optional optimization: remove from bgmNodes array)
 }
 
 function playSound(type) {
@@ -770,11 +829,9 @@ function playSound(type) {
     gain.connect(audioCtx.destination);
 
     if (type === 'correct') {
-        // High "Ding-Dong" or "Pico" sound
-        // Arpeggio C5 -> E5 -> G5 quickly
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
@@ -783,7 +840,6 @@ function playSound(type) {
         osc.stop(now + 0.3);
 
     } else if (type === 'wrong') {
-        // Low Buzz "Buu"
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(150, now);
         osc.frequency.linearRampToValueAtTime(100, now + 0.2);
@@ -795,7 +851,6 @@ function playSound(type) {
         osc.stop(now + 0.3);
 
     } else if (type === 'start') {
-        // Ascending slide
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(220, now);
         osc.frequency.exponentialRampToValueAtTime(880, now + 0.4);
@@ -807,12 +862,11 @@ function playSound(type) {
         osc.stop(now + 0.4);
 
     } else if (type === 'finish') {
-        // Fanfare-ish
         osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(523.25, now);
         osc.frequency.setValueAtTime(523.25, now + 0.1);
         osc.frequency.setValueAtTime(523.25, now + 0.2);
-        osc.frequency.setValueAtTime(659.25, now + 0.4); // E5
+        osc.frequency.setValueAtTime(659.25, now + 0.4);
 
         gain.gain.setValueAtTime(0.1, now);
         gain.gain.setValueAtTime(0.1, now + 0.3);
@@ -822,13 +876,11 @@ function playSound(type) {
         osc.stop(now + 0.8);
 
     } else if (type === 'combo') {
-        // "Fire" sound: Noise burst + rising pitch? 
-        // Simple approximation: Quick rising sweep with noise is hard with just oscillator, so use Square Wave sweep
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15); // Slightly lower pitch
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
 
-        gain.gain.setValueAtTime(0.05, now); // Quiet "bling"
+        gain.gain.setValueAtTime(0.05, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
 
         osc.start(now);
