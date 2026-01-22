@@ -1,116 +1,184 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>さんすうバルーン | きたのん学習ゲーム</title>
 
-  <link rel="stylesheet" href="style.css" />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>さんすうバルーン | きたのん学習ゲーム</title>
+  <link rel="stylesheet" href="./game.css">
+  <style>
+    /* Essential styles for the game container and overlays */
+    /* Additional custom styles to ensure IDs are present but don't break layout if unused by CSS */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Fixed Navigation High Z-Index */
+    #global-nav {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid #0288d1;
+      color: #0288d1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .nav-btn:hover {
+      background: #e1f5fe;
+    }
+
+    /* Ensure unused but required elements are hidden or unobtrusive if not styled by game.css */
+    #settings-open-btn,
+    #sound-toggle-start {
+      /* These might be absolutely positioned by game.css if used, or we just rely on game.css */
+    }
+  </style>
 </head>
 
 <body>
 
-  <!-- ヘッダー -->
-  <header class="game-header">
-    <!-- さんすうゲームのホームへ戻る -->
-    <button id="home-btn" class="header-btn">
-      ← さんすうゲーム ホーム
-    </button>
+  <!-- Fixed Navigation Area (Always Visible) -->
+  <div id="global-nav">
+    <a href="../index.html" class="nav-btn">⬅ さんすうホーム</a>
+    <a href="../../index.html" class="nav-btn">🏠 きたのんホーム</a>
+  </div>
 
-    <!-- きたのん学習ゲームへ戻る -->
-    <button id="back-btn" class="header-btn">
-      ← きたのん学習ゲーム
-    </button>
-  </header>
-
-  <!-- ゲーム画面 -->
-  <main class="game-container">
-    <div class="hud">
-      <div class="hud-item">スコア: <span id="score-display">0</span></div>
-      <div class="hud-item">のこり: <span id="time-display">60</span></div>
-    </div>
-
-    <div id="question-text" class="question"></div>
-
+  <div id="game-container">
+    <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
 
-    <div id="combo-popup" class="combo-popup hidden">
-      <span id="combo-count">2</span> COMBO!!
+    <!-- UI Layer -->
+    <div id="ui-layer">
+      <div class="hud-top">
+        <div class="hud-row">
+          <div class="hud-item score-box">
+            <span class="icon">🏆</span>
+            <span class="label">スコア:</span>
+            <span id="score-display">0</span>
+          </div>
+          <div class="hud-item timer-box">
+            <span class="icon">⏰</span>
+            <span class="label">のこり:</span>
+            <span id="time-display">60</span>
+          </div>
+        </div>
+        <div class="question-row">
+          <div id="question-text" class="question-box">READY?</div>
+        </div>
+      </div>
+
+      <!-- Transient Combo Popups -->
+      <div id="combo-popup" class="combo-popup">
+        <span id="combo-count">0</span> COMBO!!
+      </div>
+
+      <!-- Character Feedback (Hidden by default) -->
+      <div id="char-feedback" class="feedback-layer hidden">
+        <img id="feedback-img" src="" alt="Feedback">
+      </div>
     </div>
-  </main>
 
-  <!-- スタート画面 -->
-  <div id="overlay-start" class="overlay">
-    <div class="overlay-content">
-      <h1>さんすうバルーン</h1>
+    <!-- START OVERLAY -->
+    <div id="overlay-start" class="overlay">
+      <div class="modal">
+        <div class="mascot-wrapper">
+          <!-- Placeholder for mascot if needed, or just standard start screen -->
+        </div>
+        <h2>さんすうバルーン</h2>
+        <div class="settings-preview">
+          <!-- Grade Selection -->
+          <div class="setting-item">
+            <label for="grade-select">がくねんをえらんでね</label>
+            <select id="grade-select" class="grade-select">
+              <option value="1">1ねんせい (たしざん)</option>
+              <option value="2">2ねんせい (ひきざん)</option>
+              <option value="3">3ねんせい (かけざん)</option>
+              <option value="4">4ねんせい (わりざん)</option>
+              <option value="5">5ねんせい (しょうすう)</option>
+              <option value="6">6ねんせい (はやさ)</option>
+            </select>
+          </div>
+        </div>
 
-      <label>
-        がくねん：
-        <select id="grade-select">
-          <option value="1">1ねん</option>
-          <option value="2">2ねん</option>
-          <option value="3">3ねん</option>
-          <option value="4">4ねん</option>
-          <option value="5">5ねん</option>
-          <option value="6">6ねん</option>
-        </select>
-      </label>
+        <div class="btn-row">
+          <button id="start-btn" class="btn-lg primary-btn">スタート！</button>
+        </div>
 
-      <label>
-        <input type="checkbox" id="sound-toggle-start" checked />
-        おとを ならす
-      </label>
-
-      <button id="start-btn">スタート</button>
+        <!-- Hidden inputs/toggles required by specs but potentially unused in current JS version -->
+        <div style="margin-top: 10px; opacity: 0.5;">
+          <button id="settings-open-btn" style="display:none;">設定</button>
+          <label style="display:none;"><input type="checkbox" id="sound-toggle-start"> 音</label>
+        </div>
+      </div>
     </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="overlay-gameover" class="overlay hidden">
+      <div class="modal">
+        <h2>おしまい！</h2>
+        <div class="result-box">
+          <div class="score-row">
+            <span>スコア</span>
+            <span id="final-score" class="big-num">0</span>
+          </div>
+          <div class="score-row small">
+            <span>ハイスコア</span>
+            <span id="high-score">0</span>
+          </div>
+        </div>
+
+        <button id="retry-btn" class="btn-lg accent-btn">もういっかい</button>
+
+        <div style="margin-top: 20px;">
+          <a href="../index.html" class="text-link">ゲームいちらんへ</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS OVERLAY (Required by ID list) -->
+    <div id="overlay-settings" class="overlay hidden">
+      <div class="modal settings-modal">
+        <h3>せってい</h3>
+        <button id="settings-close-btn" style="position:absolute; top:10px; right:10px;">✕</button>
+
+        <div class="setting-item">
+          <label>スピード</label>
+          <div class="toggle-group">
+            <button id="speed-normal" class="active">ふつう</button>
+            <button id="speed-slow">ゆっくり</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>モード</label>
+          <button id="low-grade-mode">やさしい</button>
+        </div>
+
+        <div class="setting-item">
+          <label>音</label>
+          <input type="checkbox" id="sound-toggle-settings">
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- ゲームオーバー画面 -->
-  <div id="overlay-gameover" class="overlay hidden">
-    <div class="overlay-content">
-      <h2>おわり！</h2>
-      <p>スコア：<span id="final-score">0</span></p>
-      <p>ハイスコア：<span id="high-score">0</span></p>
-
-      <button id="retry-btn">もういちど</button>
-      <button id="home-btn" class="home-btn">ホームへ</button>
-    </div>
-  </div>
-
-  <!-- 設定画面 -->
-  <div id="overlay-settings" class="overlay hidden">
-    <div class="overlay-content">
-      <h2>せってい</h2>
-
-      <label>
-        <input type="radio" name="speed" id="speed-normal" checked />
-        ふつう
-      </label>
-      <label>
-        <input type="radio" name="speed" id="speed-slow" />
-        ゆっくり
-      </label>
-
-      <label>
-        <input type="checkbox" id="low-grade-mode" />
-        ノーペナルティ（低学年）
-      </label>
-
-      <label>
-        <input type="checkbox" id="sound-toggle-settings" checked />
-        おとを ならす
-      </label>
-
-      <button id="settings-close-btn">とじる</button>
-    </div>
-  </div>
-
-  <!-- キャラクターフィードバック -->
-  <div id="char-feedback" class="hidden">
-    <img id="feedback-img" src="" alt="feedback" />
-  </div>
-
-  <!-- ゲーム本体 -->
-  <script src="game.js"></script>
+  <script src="./game.js"></script>
 </body>
+
 </html>
