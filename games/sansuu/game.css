@@ -11,8 +11,7 @@ body {
 #game-container {
     position: relative;
     width: 100%;
-    height: 100vh;
-    height: 100svh;
+    height: 100%;
     background-color: #e0f7fa;
     /* Sky blue */
     overflow: hidden;
@@ -24,7 +23,6 @@ body {
     height: 100%;
 }
 
-/* UI Layer */
 /* UI Layer */
 #ui-layer {
     position: absolute;
@@ -40,52 +38,23 @@ body {
 
 .hud-top {
     display: flex;
-    flex-direction: column;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 16px;
-    padding: 8px 16px;
-    padding-top: max(8px, env(safe-area-inset-top));
-    gap: 10px;
-}
-
-.hud-row {
-    display: flex;
     justify-content: space-between;
-    align-items: center;
-    width: 100%;
+    align-items: flex-start;
+    padding: 10px 16px;
+    /* Safe area for notched phones */
+    padding-top: max(10px, env(safe-area-inset-top));
 }
 
-.question-row {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-}
-
-/* HUD Items (Score, Timer) */
-.hud-item {
+.score-box {
     background: rgba(255, 255, 255, 0.9);
-    padding: 5px 12px;
+    padding: 8px 16px;
     border-radius: 20px;
     border: 2px solid var(--color-primary);
     font-weight: bold;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
     min-width: 80px;
-    justify-content: center;
-    height: 40px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.grade-select {
-    font-size: 1rem;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background: #fff;
-    width: 100%;
-    max-width: 300px;
 }
 
 .score-box .label {
@@ -93,146 +62,66 @@ body {
     color: var(--color-text-light);
 }
 
-.hud-item .icon {
-    display: none;
-    /* Hidden on desktop by default unless space is tight */
-    font-size: 1.2rem;
-}
-
-#score-display,
-#time-display {
-    font-size: clamp(1.2rem, 3vw, 1.5rem);
-    /* Responsive Font */
+#score-display {
+    font-size: 1.5rem;
     color: var(--color-primary-dark);
 }
 
-.timer-box {
-    border-color: #ccc;
-    color: #555;
-    white-space: nowrap;
-}
-
-/* ... existing code ... */
-
-/* Question adjustments (Mobile-First) */
 .question-box {
-    background: #fff;
-    padding: 6px 16px;
-    border-radius: 16px;
+    background: white;
+    padding: 10px 24px;
+    border-radius: 12px;
     border: 3px solid var(--color-accent);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    font-size: clamp(24px, 6.2vw, 38px);
-    font-weight: 900;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+    font-size: 2rem;
+    font-weight: bold;
     color: #333;
-    text-align: center;
-    white-space: pre-line;
-    min-width: 240px;
-    line-height: 1.2;
-    z-index: 20;
-    /* Ensure it stays above balloons if they get close */
 }
 
-/* Combo Popup (Transient) */
+.menu-btn-container {
+    pointer-events: auto;
+}
+
+.icon-btn {
+    background: white;
+    border: 2px solid #ccc;
+    width: 44px;
+    /* Accessible size */
+    height: 44px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #666;
+    cursor: pointer;
+}
+
+/* Combo */
 .hud-combo {
     position: absolute;
-    top: 140px;
-    /* Below question */
+    top: 120px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 900;
     color: #ff5722;
-    text-shadow:
-        2px 2px 0 #fff,
-        -1px -1px 0 #fff,
-        1px -1px 0 #fff,
-        -1px 1px 0 #fff,
-        1px 1px 0 #fff;
+    text-shadow: 2px 2px 0 white;
     pointer-events: none;
-    white-space: nowrap;
-    z-index: 30;
-    opacity: 0;
-    /* Hidden by default */
-}
-
-/* Animation class added via JS */
-.combo-pop {
-    animation: popAndFade 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .hud-combo.hidden {
     display: none;
 }
 
-@keyframes popAndFade {
-    0% {
+@keyframes popIn {
+    from {
         transform: translateX(-50%) scale(0.5);
         opacity: 0;
     }
 
-    20% {
-        transform: translateX(-50%) scale(1.2);
+    to {
+        transform: translateX(-50%) scale(1);
         opacity: 1;
-    }
-
-    40% {
-        transform: translateX(-50%) scale(1.0);
-        opacity: 1;
-    }
-
-    80% {
-        transform: translateX(-50%) scale(1.0);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translateX(-50%) scale(1.1);
-        opacity: 0;
-    }
-}
-
-/* New Ephemeral Combo Popup */
-.combo-popup {
-    position: absolute;
-    top: 30%;
-    /* Center-ish top */
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 3rem;
-    font-weight: 900;
-    color: #ffca28;
-    /* Gold/Yellow */
-    text-align: center;
-    pointer-events: none;
-    z-index: 100;
-    white-space: nowrap;
-    text-shadow: 3px 3px 0 #d84315, -1px -1px 0 #fff;
-    opacity: 0;
-}
-
-.combo-popup.animate {
-    animation: comboBounce 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@keyframes comboBounce {
-    0% {
-        transform: translate(-50%, -50%) scale(0.5);
-        opacity: 0;
-    }
-
-    50% {
-        transform: translate(-50%, -50%) scale(1.2);
-        opacity: 1;
-    }
-
-    70% {
-        transform: translate(-50%, -50%) scale(0.9);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translate(-50%, -50%) scale(1.0);
-        opacity: 0;
     }
 }
 
@@ -246,16 +135,11 @@ body {
     background: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    /* Align top for scrollability */
+    align-items: center;
     z-index: 50;
     pointer-events: auto;
     opacity: 1;
     transition: opacity 0.3s;
-    padding-top: max(80px, calc(10vh + env(safe-area-inset-top)));
-    /* Ensure mascot space */
-    overflow-y: auto;
-    /* Allow scrolling if modal is tall */
 }
 
 .overlay.hidden {
@@ -273,9 +157,6 @@ body {
     text-align: center;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.4s ease-out;
-    position: relative;
-    margin-bottom: 40px;
-    /* Space for bottom scroll */
 }
 
 @keyframes slideUp {
@@ -415,85 +296,5 @@ body {
     100% {
         opacity: 0;
         transform: scale(1.1);
-    }
-}
-
-
-
-/* =========================================
-   MOBILE PORTRAIT OPTIMIZATIONS
-   ========================================= */
-@media (max-width: 600px) and (orientation: portrait) {
-    .hud-top {
-        padding: 5px 10px;
-        padding: 4px 10px;
-        padding-top: max(4px, env(safe-area-inset-top));
-        gap: 12px;
-    }
-
-    /* Combo popup slightly higher on mobile to avoid balloons */
-    .hud-combo {
-        top: 130px;
-        font-size: 2rem;
-    }
-
-    /* Compact Row */
-    .hud-row {
-        gap: 8px;
-    }
-
-    .hud-item {
-        padding: 4px 10px;
-        min-width: auto;
-        height: 36px;
-        border-width: 1.5px;
-    }
-
-    /* Hide text labels, show icons */
-    .score-box .label {
-        display: none;
-    }
-
-    .hud-item .icon {
-        display: inline-block;
-        margin-right: 2px;
-    }
-
-    #score-display,
-    #time-display {
-        font-size: 1.3rem;
-        /* Larger score/time */
-    }
-
-    /* Question adjustments - VERY LARGE on mobile */
-    .question-box {
-        font-size: clamp(24px, 6.2vw, 38px);
-        /* Fixed large size for stability */
-        padding: 8px 16px;
-        /* More padding */
-        width: 100%;
-        max-width: 90%;
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-    }
-
-
-    /* Better Grade Dropdown on Mobile */
-    .grade-select-container .grade-select {
-        font-size: 1.2rem;
-        padding: 12px;
-        height: 50px;
-        /* Easy tap target */
-    }
-
-    /* Ensure Start Button is large enough */
-    #start-btn {
-        padding: 18px 40px;
-        font-size: 1.6rem;
-        width: 80%;
-    }
-
-    .settings-preview {
-        width: 100%;
-        text-align: left;
     }
 }

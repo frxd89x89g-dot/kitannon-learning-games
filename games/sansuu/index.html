@@ -2,183 +2,150 @@
 <html lang="ja">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>さんすうバルーン | きたのん学習ゲーム</title>
-  <link rel="stylesheet" href="./game.css">
-  <style>
-    /* Essential styles for the game container and overlays */
-    /* Additional custom styles to ensure IDs are present but don't break layout if unused by CSS */
-    .hidden {
-      display: none !important;
-    }
-
-    /* Fixed Navigation High Z-Index */
-    #global-nav {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .nav-btn {
-      background: rgba(255, 255, 255, 0.9);
-      border: 2px solid #0288d1;
-      color: #0288d1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 0.9rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .nav-btn:hover {
-      background: #e1f5fe;
-    }
-
-    /* Ensure unused but required elements are hidden or unobtrusive if not styled by game.css */
-    #settings-open-btn,
-    #sound-toggle-start {
-      /* These might be absolutely positioned by game.css if used, or we just rely on game.css */
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>さんすうゲーム | きたのん</title>
+    <link rel="stylesheet" href="../../assets/css/site.css?v=2">
+    <link rel="stylesheet" href="game.css">
 </head>
 
 <body>
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Background Layer -->
+        <canvas id="game-canvas"></canvas>
 
-  <!-- Fixed Navigation Area (Always Visible) -->
-  <div id="global-nav">
-    <a href="../index.html" class="nav-btn">⬅ さんすうホーム</a>
-    <a href="../../index.html" class="nav-btn">🏠 きたのんホーム</a>
-  </div>
+        <!-- HUD Layer -->
+        <div id="ui-layer">
+            <div class="hud-top">
+                <div class="score-box">
+                    <span class="label">スコア</span>
+                    <span id="score-display">0</span>
+                </div>
+                <div class="question-box">
+                    <span id="question-text">? + ?</span>
+                </div>
+                <!-- TImer Box -->
+                <div class="timer-box"
+                    style="background:#fff; padding:5px 12px; border-radius:15px; border:2px solid #ccc; font-weight:bold; color:#555; display:flex; align-items:center; gap:5px;">
+                    <span>⏰</span>
+                    <span id="time-display">60</span>
+                </div>
+                <div class="menu-btn-container">
+                    <button id="pause-btn" class="icon-btn" aria-label="メニュー">III</button>
+                </div>
+            </div>
 
-  <div id="game-container">
-    <!-- Game Canvas -->
-    <canvas id="game-canvas"></canvas>
-
-    <!-- UI Layer -->
-    <div id="ui-layer">
-      <div class="hud-top">
-        <div class="hud-row">
-          <div class="hud-item score-box">
-            <span class="icon">🏆</span>
-            <span class="label">スコア:</span>
-            <span id="score-display">0</span>
-          </div>
-          <div class="hud-item timer-box">
-            <span class="icon">⏰</span>
-            <span class="label">のこり:</span>
-            <span id="time-display">60</span>
-          </div>
+            <div class="hud-combo hidden" id="combo-display">
+                <span id="combo-count">0</span> COMBO!!
+            </div>
         </div>
-        <div class="question-row">
-          <div id="question-text" class="question-box">READY?</div>
+
+        <!-- Overlays -->
+        <div id="overlay-start" class="overlay active">
+            <div class="modal">
+                <div class="mascot-wrapper">
+                    <img src="../../assets/characters/kitannon_normal.png" alt="きたのん" class="mascot">
+                </div>
+                <h2>さんすうゲーム</h2>
+                <p>ふうせんを たっちして<br>こたえよう！</p>
+
+                <div class="settings-preview">
+                    <!-- Grade Layout -->
+                    <div style="margin-bottom: 12px;">
+                        <label for="grade-select"
+                            style="font-weight:bold; display:block; margin-bottom:5px; color:#5d4037;">がくねん
+                            (Grade)</label>
+                        <select id="grade-select"
+                            style="font-size: 1.1rem; padding: 8px; border-radius: 10px; border: 2px solid #ccc; width: 100%; max-width: 200px; text-align:center;">
+                            <option value="1">1ねん (たしざん)</option>
+                            <option value="2">2ねん (2けた)</option>
+                            <option value="3">3ねん (かけ算)</option>
+                            <option value="4">4ねん (わり算)</option>
+                            <option value="5">5ねん (小数)</option>
+                            <option value="6">6ねん (速さなど)</option>
+                        </select>
+                    </div>
+
+                    <label style="display: block; margin-top: 10px;">
+                        <input type="checkbox" id="sound-toggle-start" checked>
+                        🔊 音あり
+                    </label>
+                </div>
+
+                <button id="start-btn" class="btn btn-lg">スタート</button>
+                <div style="margin-top:20px;">
+                    <a href="../../games/index.html" class="text-link">もどる</a>
+                    <button id="settings-open-btn" class="text-link"
+                        style="background:none; border:none; margin-left:15px;">⚙️ 設定</button>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <!-- Transient Combo Popups -->
-      <div id="combo-popup" class="combo-popup">
-        <span id="combo-count">0</span> COMBO!!
-      </div>
+        <div id="overlay-gameover" class="overlay hidden">
+            <div class="modal">
+                <h2>おしまい！</h2>
+                <div class="result-box">
+                    <div class="score-row">
+                        <span>スコア</span>
+                        <span id="final-score" class="big-num">0</span>
+                    </div>
+                    <div class="score-row small">
+                        <span>ハイスコア</span>
+                        <span id="high-score">0</span>
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button id="retry-btn" class="btn">もういっかい</button>
+                    <a href="../../games/index.html" class="btn btn-secondary">おわる</a>
+                </div>
+            </div>
+        </div>
 
-      <!-- Character Feedback (Hidden by default) -->
-      <div id="char-feedback" class="feedback-layer hidden">
-        <img id="feedback-img" src="" alt="Feedback">
-      </div>
+        <!-- Settings Modal (Guardian) -->
+        <div id="overlay-settings" class="overlay hidden">
+            <div class="modal settings-modal">
+                <h3>保護者設定 (ほごしゃせってい)</h3>
+
+                <div class="setting-item">
+                    <label>風船の速さ</label>
+                    <div class="toggle-group">
+                        <input type="radio" name="speed" id="speed-normal" value="normal" checked>
+                        <label for="speed-normal">ふつう (Normal)</label>
+
+                        <input type="radio" name="speed" id="speed-slow" value="slow">
+                        <label for="speed-slow">ゆっくり (Slow)</label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>低学年モード (ミス減点なし)</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="low-grade-mode">
+                        <label for="low-grade-mode" class="switch-label"></label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>音量設定</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="sound-toggle-settings" checked>
+                        <label for="sound-toggle-settings">効果音・BGM</label>
+                    </div>
+                </div>
+
+                <button id="settings-close-btn" class="btn">とじる</button>
+            </div>
+        </div>
+
+        <!-- Character Feedback Overlay (Flash) -->
+        <div id="char-feedback" class="feedback-layer hidden">
+            <img id="feedback-img" src="../../assets/characters/kitannon_correct.png" alt="">
+        </div>
     </div>
 
-    <!-- START OVERLAY -->
-    <div id="overlay-start" class="overlay">
-      <div class="modal">
-        <div class="mascot-wrapper">
-          <!-- Placeholder for mascot if needed, or just standard start screen -->
-        </div>
-        <h2>さんすうバルーン</h2>
-        <div class="settings-preview">
-          <!-- Grade Selection -->
-          <div class="setting-item">
-            <label for="grade-select">がくねんをえらんでね</label>
-            <select id="grade-select" class="grade-select">
-              <option value="1">1ねんせい (たしざん)</option>
-              <option value="2">2ねんせい (ひきざん)</option>
-              <option value="3">3ねんせい (かけざん)</option>
-              <option value="4">4ねんせい (わりざん)</option>
-              <option value="5">5ねんせい (しょうすう)</option>
-              <option value="6">6ねんせい (はやさ)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="btn-row">
-          <button id="start-btn" class="btn-lg primary-btn">スタート！</button>
-        </div>
-
-        <!-- Hidden inputs/toggles required by specs but potentially unused in current JS version -->
-        <div style="margin-top: 10px; opacity: 0.5;">
-          <button id="settings-open-btn" style="display:none;">設定</button>
-          <label style="display:none;"><input type="checkbox" id="sound-toggle-start"> 音</label>
-        </div>
-      </div>
-    </div>
-
-    <!-- GAME OVER OVERLAY -->
-    <div id="overlay-gameover" class="overlay hidden">
-      <div class="modal">
-        <h2>おしまい！</h2>
-        <div class="result-box">
-          <div class="score-row">
-            <span>スコア</span>
-            <span id="final-score" class="big-num">0</span>
-          </div>
-          <div class="score-row small">
-            <span>ハイスコア</span>
-            <span id="high-score">0</span>
-          </div>
-        </div>
-
-        <button id="retry-btn" class="btn-lg accent-btn">もういっかい</button>
-
-        <div style="margin-top: 20px;">
-          <a href="../index.html" class="text-link">ゲームいちらんへ</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- SETTINGS OVERLAY (Required by ID list) -->
-    <div id="overlay-settings" class="overlay hidden">
-      <div class="modal settings-modal">
-        <h3>せってい</h3>
-        <button id="settings-close-btn" style="position:absolute; top:10px; right:10px;">✕</button>
-
-        <div class="setting-item">
-          <label>スピード</label>
-          <div class="toggle-group">
-            <button id="speed-normal" class="active">ふつう</button>
-            <button id="speed-slow">ゆっくり</button>
-          </div>
-        </div>
-
-        <div class="setting-item">
-          <label>モード</label>
-          <button id="low-grade-mode">やさしい</button>
-        </div>
-
-        <div class="setting-item">
-          <label>音</label>
-          <input type="checkbox" id="sound-toggle-settings">
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <script src="./game.js"></script>
+    <script src="game.js"></script>
 </body>
 
 </html>
