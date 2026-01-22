@@ -1,100 +1,41 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>ゲーム一覧 | きたのん 学習ゲーム</title>
-    <meta name="description" content="遊べる学習ゲームの一覧です。">
-    <link rel="stylesheet" href="../assets/css/site.css?v=2">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ゲーム一覧 | きたのん学習ゲーム</title>
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-    <header>
-        <div class="container header-inner">
-            <a href="../index.html" class="site-title">
-                <img src="../assets/characters/kitannon_normal.png" alt="きたのん">
-                <span>きたのん 学習ゲーム</span>
-            </a>
-            <nav>
-                <ul>
-                    <li><a href="../index.html">トップ</a></li>
-                    <li><a href="index.html">ゲーム</a></li>
-                    <li><a href="../about/index.html">このサイトについて</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
 
-    <main class="container">
-        <h1 class="text-center" style="margin: 40px 0;">ゲーム一覧</h1>
+  <header class="game-header">
+    <button onclick="location.href='../index.html'" class="header-btn">
+      ← きたのん学習ゲーム
+    </button>
+  </header>
 
-        <div class="card-grid">
-            <!-- Active Game -->
-            <div class="card">
-                <h3>🎈 さんすうゲーム</h3>
-                <p>たしざん・ひきざん・かけざん</p>
-                <p>風船をタッチして答えよう！</p>
-                <div style="margin-top: 16px;">
-                    <a href="sansuu/index.html" class="btn">あそぶ</a>
-                </div>
-            </div>
+  <main class="game-list">
+    <h1>きたのん 学習ゲーム</h1>
 
-            <!-- Coming Soon Games -->
-            <div class="card card-disabled">
-                <h3>漢字ゲーム</h3>
-                <p>準備中...</p>
-                <div style="margin-top: 16px;">
-                    <button class="btn btn-disabled" onclick="alert('もうすこしまってね！')">あそぶ</button>
-                </div>
-            </div>
+    <div class="game-cards">
+      <a href="sansuu/index.html" class="game-card">
+        <h2>さんすうバルーン</h2>
+        <p>たのしく けいさん！</p>
+      </a>
 
-            <div class="card card-disabled">
-                <h3>英単語ゲーム</h3>
-                <p>準備中...</p>
-                <div style="margin-top: 16px;">
-                    <button class="btn btn-disabled" onclick="alert('もうすこしまってね！')">あそぶ</button>
-                </div>
-            </div>
+      <div class="game-card coming-soon">
+        <h2>かんじゲーム</h2>
+        <p>じゅんびちゅう</p>
+      </div>
 
-            <div class="card card-disabled">
-                <h3>時計ゲーム</h3>
-                <p>準備中...</p>
-                <div style="margin-top: 16px;">
-                    <button class="btn btn-disabled" onclick="alert('もうすこしまってね！')">あそぶ</button>
-                </div>
-            </div>
+      <div class="game-card coming-soon">
+        <h2>えいごゲーム</h2>
+        <p>じゅんびちゅう</p>
+      </div>
+    </div>
+  </main>
 
-            <div class="card card-disabled">
-                <h3>都道府県ゲーム</h3>
-                <p>準備中...</p>
-                <div style="margin-top: 16px;">
-                    <button class="btn btn-disabled" onclick="alert('もうすこしまってね！')">あそぶ</button>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            .card-disabled {
-                opacity: 0.8;
-                background-color: #f9f9f9;
-                border-color: #eee;
-            }
-
-            .btn-disabled {
-                background: #ccc;
-                border-color: #bbb;
-                cursor: pointer;
-                /* clickable for alert */
-            }
-        </style>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 Kitannon Learning Games</p>
-        </div>
-    </footer>
 </body>
-
 </html>
