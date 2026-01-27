@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>漢字リンゴキャッチ | きたのん</title>
+    <!-- Use specific game css -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- Canvas -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Layer -->
+        <div id="ui-layer">
+            <div class="hud-top">
+                <div class="score-box">
+                    <span class="label">スコア</span>
+                    <span id="score-display">0</span>
+                </div>
+
+                <div class="question-box">
+                    <span class="label">もんだい</span>
+                    <span id="question-text">?</span>
+                </div>
+
+                <div class="right-hud">
+                    <div class="timer-box">
+                        <span>⏰</span>
+                        <span id="time-display">60</span>
+                    </div>
+                    <button id="pause-btn" class="icon-btn" aria-label="一時停止">II</button>
+                </div>
+            </div>
+
+            <!-- Message Overlay (for Level Up / Start etc if needed later) -->
+            <div id="message-overlay" class="message-overlay"></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="overlay-start" class="overlay active">
+            <div class="modal">
+                <div class="mascot-wrapper">
+                    <!-- Using the kitannon basket image if possible, or normal -->
+                    <img src="../../assets/characters/kitannon_basket.png" alt="きたのん">
+                </div>
+                <h2>漢字リンゴキャッチ</h2>
+                <p>よみかたに あう 「かんじ」の<br>リンゴを つかまえよう！</p>
+
+                <div class="setting-group">
+                    <label for="grade-select">がくねん (Grade)</label>
+                    <select id="grade-select">
+                        <option value="1">1ねん (基本)</option>
+                        <option value="2">2ねん (画数多め)</option>
+                        <option value="3">3ねん (似た漢字)</option>
+                        <option value="4">4ねん (熟語・初級)</option>
+                        <option value="5">5ねん (熟語・中級)</option>
+                        <option value="6">6ねん (熟語・上級)</option>
+                    </select>
+                </div>
+
+                <div class="setting-group" style="text-align:left; padding-left:20px;">
+                    <label style="display:inline-flex; align-items:center; cursor:pointer;">
+                        <input type="checkbox" id="sound-toggle-start" checked
+                            style="margin-right:10px; transform:scale(1.5);">
+                        🎵 音をならす
+                    </label>
+                </div>
+
+                <button id="start-btn" class="btn">スタート</button>
+                <div style="margin-top:15px;">
+                    <a href="../../games/index.html" style="color:#6D4C41; font-weight:bold;">みんなのゲームへ もどる</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="overlay-pause" class="overlay">
+            <div class="modal">
+                <h2>きゅうけい</h2>
+                <p>ゲームを いちじちゅうだん しています</p>
+                <button id="resume-btn" class="btn">つづける</button>
+                <button id="quit-btn" class="btn btn-secondary">タイトルへ</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="overlay-gameover" class="overlay hidden">
+            <div class="modal">
+                <h2 style="color:#d32f2f;">おしまい！</h2>
+                <div class="result-display">
+                    <p class="label">あなたのスコア</p>
+                    <div id="final-score" class="big-score">0</div>
+                    <div id="evaluation-message" class="praise-text">すごい！</div>
+                    <p class="small">ハイスコア: <span id="high-score">0</span></p>
+                </div>
+
+                <button id="retry-btn" class="btn">もういっかい</button>
+                <button id="gameover-back-btn" class="btn btn-secondary">タイトルへ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Logic -->
+    <script src="game.js"></script>
+</body>
+
+</html>

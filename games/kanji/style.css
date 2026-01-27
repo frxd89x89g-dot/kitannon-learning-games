@@ -1,0 +1,359 @@
+@charset "UTF-8";
+
+/* Reset & Base */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    overflow: hidden;
+    background-color: #8D6E63;
+    /* Fallback brown */
+    color: #333;
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;
+    /* Prevent browser scrolling */
+}
+
+/* Container */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #81D4FA 0%, #B3E5FC 40%, #A5D6A7 40%, #66BB6A 100%);
+    /* Simple sky to forest ground gradient */
+}
+
+/* Canvas */
+canvas#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* UI Layer */
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Let clicks pass through to canvas primarily, but overlays will re-enable */
+}
+
+/* HUD Top */
+.hud-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    /* Safe area handled via body padding usually, but simple here */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Score Box */
+.score-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 3px solid #8D6E63;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.score-box .label {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #5D4037;
+}
+
+#score-display {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #E65100;
+    line-height: 1;
+}
+
+/* Question Box (Center) */
+.question-box {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    padding: 10px 30px;
+    border-radius: 15px;
+    border: 4px solid #FF9800;
+    /* Apple color */
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+    text-align: center;
+    min-width: 180px;
+}
+
+.question-box .label {
+    display: block;
+    font-size: 0.75rem;
+    color: #777;
+    margin-bottom: 2px;
+}
+
+#question-text {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #212121;
+    white-space: nowrap;
+}
+
+/* Timer & Pause */
+.right-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.timer-box {
+    background: #fff;
+    padding: 5px 12px;
+    border-radius: 15px;
+    border: 2px solid #ccc;
+    font-weight: bold;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.icon-btn {
+    background: #FFF9C4;
+    border: 2px solid #FBC02D;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: #F57F17;
+}
+
+.icon-btn:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+/* Messages/Effects */
+.message-overlay {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    font-weight: 900;
+    color: #FF1744;
+    text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 20;
+    white-space: nowrap;
+}
+
+.message-overlay.show {
+    opacity: 1;
+    animation: popScale 0.5s ease-out;
+}
+
+@keyframes popScale {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Overlays (Modal) */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal {
+    background: #FFECB3;
+    /* Light wood color */
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    border-radius: 20px;
+    border: 5px solid #8D6E63;
+    /* Dark wood */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal h2 {
+    font-size: 1.8rem;
+    color: #5D4037;
+    margin-bottom: 10px;
+}
+
+.modal p {
+    color: #6D4C41;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+/* Mascot on Start Screen */
+/* Mascot on Start Screen */
+.mascot-wrapper {
+    margin-top: -20px;
+    /* Reduced negative margin to prevent top clipping */
+    margin-bottom: 10px;
+    height: 150px;
+    /* Explicit height for container */
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.mascot-wrapper img {
+    height: 100%;
+    width: auto;
+    /* Allow width to scale */
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.2));
+}
+
+/* Form Controls */
+.setting-group {
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.setting-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #4E342E;
+}
+
+select {
+    font-size: 1.2rem;
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid #8D6E63;
+    width: 100%;
+    background: white;
+}
+
+/* Buttons */
+.btn {
+    background: #8BC34A;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 30px;
+    border-bottom: 4px solid #689F38;
+    cursor: pointer;
+    margin: 5px;
+    transition: transform 0.1s;
+    width: 80%;
+}
+
+.btn:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+}
+
+.btn-secondary {
+    background: #90A4AE;
+    border-bottom-color: #607D8B;
+}
+
+.btn-close {
+    background: #ef5350;
+    border-bottom-color: #c62828;
+}
+
+/* Results */
+.big-score {
+    font-size: 3rem;
+    color: #E65100;
+    font-weight: 900;
+    margin: 10px 0;
+}
+
+.praise-text {
+    font-size: 1.5rem;
+    color: #d32f2f;
+    font-weight: bold;
+    margin-bottom: 15px;
+    min-height: 1.8em;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 480px) {
+    #question-text {
+        font-size: 1.5rem;
+    }
+
+    .question-box {
+        min-width: 120px;
+        padding: 8px 15px;
+    }
+
+    .mascot-wrapper img {
+        height: 100px;
+    }
+}
