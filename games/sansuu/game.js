@@ -95,6 +95,13 @@ function init() {
         if (e.target === overlaySettings) closeSettings();
     });
 
+    // Back to Title Buttons
+    const goBackBtn = document.getElementById('gameover-back-btn');
+    if (goBackBtn) goBackBtn.addEventListener('click', backToTitle);
+
+    const setBackBtn = document.getElementById('settings-back-title-btn');
+    if (setBackBtn) setBackBtn.addEventListener('click', backToTitle);
+
     loadSettingsUI();
 
     uiHighScore.innerText = state.highScore;
@@ -201,6 +208,20 @@ function resetGame() {
     startGame();
 }
 
+function backToTitle() {
+    stopBGM();
+    state.isPlaying = false;
+    state.isPaused = false;
+
+    overlaySettings.classList.add('hidden');
+    overlayGameOver.classList.add('hidden');
+    overlayStart.classList.remove('hidden');
+
+    // Clear game state visuals if desired, or leave freeze frame
+    // state.balloons = [];
+    // render(); 
+}
+
 // function togglePause() removed/replaced by openSettings/closeSettings
 
 function gameOver() {
@@ -215,6 +236,18 @@ function gameOver() {
     uiFinalScore.innerText = state.score;
     uiHighScore.innerText = state.highScore;
 
+    // Evaluation Message
+    const evalMsg = document.getElementById('evaluation-message');
+    if (evalMsg) {
+        let msg = "";
+        const s = state.score;
+        if (s <= 50) msg = "がんばったね！ 次はもっといける！";
+        else if (s <= 100) msg = "すごい！ そのちょうし！";
+        else if (s <= 200) msg = "やったー！ かなりいいかんじ！";
+        else msg = "すばらしい！ 天才かも！？";
+        evalMsg.innerText = msg;
+    }
+
     overlayGameOver.classList.remove('hidden');
     playSound('finish');
 }
@@ -224,51 +257,91 @@ function generateQuestion() {
     let text = "";
     let ans = 0;
 
+    // --- Grade 1: 1-digit + 1-digit Addition ---
     if (g === 1) {
-        const a = Math.floor(Math.random() * 9) + 1;
-        const b = Math.floor(Math.random() * 9) + 1;
+        const a = Math.floor(Math.random() * 9) + 1; // 1-9
+        const b = Math.floor(Math.random() * 9) + 1; // 1-9
         ans = a + b;
         text = `${a} + ${b} = ?`;
     }
+    // --- Grade 2: 2-digit + 2-digit Addition (No Subtraction) ---
     else if (g === 2) {
-        const a = Math.floor(Math.random() * 41) + 10;
-        const b = Math.floor(Math.random() * 31) + 10;
+        const a = Math.floor(Math.random() * 90) + 10; // 10-99
+        const b = Math.floor(Math.random() * 90) + 10; // 10-99
         ans = a + b;
         text = `${a} + ${b} = ?`;
     }
+    // --- Grade 3: Multiplication (9x9) ---
     else if (g === 3) {
-        const a = Math.floor(Math.random() * 8) + 2;
-        const b = Math.floor(Math.random() * 8) + 2;
+        const a = Math.floor(Math.random() * 9) + 1; // 1-9
+        const b = Math.floor(Math.random() * 9) + 1; // 1-9
         ans = a * b;
         text = `${a} × ${b} = ?`;
     }
+    // --- Grade 4: Division (Exact Integers) ---
     else if (g === 4) {
-        const divisor = Math.floor(Math.random() * 8) + 2;
-        ans = Math.floor(Math.random() * 8) + 2;
-        const dividend = ans * divisor;
+        // Reverse multiplication: Ans * Divisor = Dividend
+        const answerVal = Math.floor(Math.random() * 8) + 2; // 2-9
+        const divisor = Math.floor(Math.random() * 8) + 2;   // 2-9
+        const dividend = answerVal * divisor;
+        ans = answerVal;
         text = `${dividend} ÷ ${divisor} = ?`;
     }
+    // --- Grade 5: Decimals +/- with Forced Carry/Borrow ---
     else if (g === 5) {
-        const a = (Math.floor(Math.random() * 9) + 1) / 10;
-        const b = (Math.floor(Math.random() * 9) + 1) / 10;
-        ans = Math.round((a + b) * 10) / 10;
-        text = `${a} + ${b} = ?`;
+        const isPlus = Math.random() < 0.5;
+        let a, b;
+
+        if (isPlus) {
+            // Addition: Require carry at decimal place (decimal parts sum >= 10 -> 1.0)
+            // Logic: Generate decimal parts that sum >= 10
+            do {
+                a = (Math.floor(Math.random() * 89) + 1) / 10; // 0.1 ~ 8.9 (roughly, avoiding 0)
+                b = (Math.floor(Math.random() * 89) + 1) / 10;
+                // Check if decimal parts sum >= 10 (implicitly checked if (a+b)*10 % 10 is actually clean 0? No, simply check decimal char?)
+                // Actually simpler:
+                // a_dec = Math.round(a * 10) % 10;
+                // b_dec = Math.round(b * 10) % 10;
+                // We want a_dec + b_dec >= 10
+            } while ((Math.round(a * 10) % 10) + (Math.round(b * 10) % 10) < 10);
+
+            ans = Math.round((a + b) * 10) / 10;
+            text = `${a} + ${b} = ?`;
+        } else {
+            // Subtraction: Require borrow at decimal place (minuend dec < subtrahend dec)
+            do {
+                a = (Math.floor(Math.random() * 89) + 11) / 10; // 1.1 ~ 9.9
+                b = (Math.floor(Math.random() * 89) + 1) / 10;  // 0.1 ~ 8.9
+
+                // Ensure a > b and a_dec < b_dec
+            } while (a <= b || (Math.round(a * 10) % 10) >= (Math.round(b * 10) % 10));
+
+            ans = Math.round((a - b) * 10) / 10;
+            text = `${a} - ${b} = ?`;
+        }
     }
+    // --- Grade 6: Speed/Time/Distance (Word Problems, No Symbols) ---
     else if (g === 6) {
         const type = Math.floor(Math.random() * 3);
-        const time = Math.floor(Math.random() * 4) + 2;
-        const speed = (Math.floor(Math.random() * 6) + 3) * 10;
-        const dist = speed * time;
+        // Setup values for nice integers
+        // Speed (km/h), Time (h hours), Dist (km)
+        // Avoid complex conversions, stick to integers.
+        const timeVal = Math.floor(Math.random() * 4) + 2;       // 2-5 hours
+        const speedVal = (Math.floor(Math.random() * 6) + 3) * 10; // 30, 40 ... 80 km/h
+        const distVal = speedVal * timeVal;
 
         if (type === 0) {
-            text = `時速${speed}km × ${time}時間 = ?km`;
-            ans = dist;
+            // Find Distance
+            text = `時速${speedVal}kmで ${timeVal}時間 すすむと？`;
+            ans = distVal;
         } else if (type === 1) {
-            text = `${dist}km ÷ ${time}時間 = ?km/h`;
-            ans = speed;
+            // Find Speed
+            text = `${distVal}kmを ${timeVal}時間で すすむ速さは？`;
+            ans = speedVal;
         } else {
-            text = `${dist}km ÷ 時速${speed}km = ?時間`;
-            ans = time;
+            // Find Time
+            text = `${distVal}kmを 時速${speedVal}kmで すすむ時間は？`;
+            ans = timeVal;
         }
     }
 
