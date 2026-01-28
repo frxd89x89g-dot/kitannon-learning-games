@@ -138,7 +138,11 @@ nav a {
   border-radius: var(--radius-xl);
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  /* Prevent line break */
 }
+
+/* ... existing button styles ... (unchanged) */
 
 nav a:hover {
   background-color: var(--color-primary-light);
@@ -146,6 +150,7 @@ nav a:hover {
 }
 
 /* Buttons (Glossy & Puffy) */
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -403,17 +408,33 @@ footer p {
     font-size: 1.1rem;
   }
 
+  /* Header Mobile Optimization */
+  .header-inner {
+    flex-wrap: nowrap;
+    /* Force single line */
+    gap: 10px;
+  }
+
   .site-title span {
-    display: none;
-    /* Hide text on very small screens if needed, or reduce size */
+    font-size: 0.9rem;
+    /* reduce title size instead of hiding */
+    white-space: nowrap;
   }
 
   .site-title img {
-    height: 40px;
+    height: 32px;
+    /* Smaller logo */
+  }
+
+  nav ul {
+    gap: 4px;
+    /* Tighter gap */
   }
 
   nav a {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+    padding: 6px 8px;
+    /* Tighter padding */
+    font-size: 0.75rem;
+    /* Smaller text */
   }
 }
