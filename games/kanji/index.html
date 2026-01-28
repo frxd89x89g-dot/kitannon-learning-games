@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>漢字リンゴキャッチ | きたのん</title>
+    <title>かんじゲーム | きたのん</title>
     <!-- Use specific game css -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -19,7 +19,7 @@
         <div id="ui-layer">
             <div class="hud-top">
                 <div class="score-box">
-                    <span class="label">スコア</span>
+                    <span class="label">てんすう</span>
                     <span id="score-display">0</span>
                 </div>
 
@@ -48,23 +48,23 @@
                     <!-- Using the kitannon basket image if possible, or normal -->
                     <img src="../../assets/characters/kitannon_basket.png" alt="きたのん">
                 </div>
-                <h2>漢字リンゴキャッチ</h2>
+                <h2>かんじゲーム</h2>
                 <p>よみかたに あう 「かんじ」の<br>リンゴを つかまえよう！</p>
 
                 <div class="setting-group">
-                    <label for="grade-select">がくねん (Grade)</label>
+                    <label for="grade-select">がくねん</label>
                     <select id="grade-select">
-                        <option value="1">1ねん (基本)</option>
-                        <option value="2">2ねん (画数多め)</option>
-                        <option value="3">3ねん (似た漢字)</option>
-                        <option value="4">4ねん (熟語・初級)</option>
-                        <option value="5">5ねん (熟語・中級)</option>
-                        <option value="6">6ねん (熟語・上級)</option>
+                        <option value="1">1ねん (かんたん)</option>
+                        <option value="2">2ねん</option>
+                        <option value="3">3ねん</option>
+                        <option value="4">4ねん (じゅくご)</option>
+                        <option value="5">5ねん (じゅくご)</option>
+                        <option value="6">6ねん (じゅくご)</option>
                     </select>
                 </div>
 
                 <div class="setting-group">
-                    <label>スピード</label>
+                    <label>はやさ</label>
                     <div style="display:flex; justify-content: space-around; font-weight:bold; color:#5D4037;">
                         <label style="cursor:pointer;">
                             <input type="radio" name="speed" value="normal" checked> ふつう
@@ -79,7 +79,7 @@
                     <label style="display:inline-flex; align-items:center; cursor:pointer;">
                         <input type="checkbox" id="sound-toggle-start" checked
                             style="margin-right:10px; transform:scale(1.5);">
-                        🎵 音をならす
+                        🎵 おとを ならす
                     </label>
                 </div>
 
@@ -96,7 +96,7 @@
                 <h2>きゅうけい</h2>
                 <p>ゲームを いちじちゅうだん しています</p>
                 <button id="resume-btn" class="btn">つづける</button>
-                <button id="quit-btn" class="btn btn-secondary">タイトルへ</button>
+                <button id="quit-btn" class="btn btn-secondary">トップへ もどる</button>
             </div>
         </div>
 
@@ -105,14 +105,14 @@
             <div class="modal">
                 <h2 style="color:#d32f2f;">おしまい！</h2>
                 <div class="result-display">
-                    <p class="label">あなたのスコア</p>
+                    <p class="label">あなたのてんすう</p>
                     <div id="final-score" class="big-score">0</div>
                     <div id="evaluation-message" class="praise-text">すごい！</div>
-                    <p class="small">ハイスコア: <span id="high-score">0</span></p>
+                    <p class="small">さいこうきろく: <span id="high-score">0</span></p>
                 </div>
 
                 <button id="retry-btn" class="btn">もういっかい</button>
-                <button id="gameover-back-btn" class="btn btn-secondary">タイトルへ</button>
+                <button id="gameover-back-btn" class="btn btn-secondary">トップへ もどる</button>
             </div>
         </div>
     </div>

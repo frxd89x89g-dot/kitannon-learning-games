@@ -8,7 +8,12 @@ const CONFIG = {
     APPLE_SPEED_MAX: 6,
     PLAYER_SPEED: 0,
     SCORE_CORRECT: 10,
-    SCORE_MISTAKE: -5
+    SCORE_MISTAKE: -5,
+    // Base dimensions for scaling
+    BASE_PLAYER_SIZE: 140,
+    BASE_APPLE_RADIUS: 35,
+    BASE_HIT_RADIUS: 70,
+    BASE_FONT_SIZE: 36
 };
 
 // DOM Elements
@@ -38,15 +43,15 @@ let state = {
     score: 0,
     timeLeft: 0,
     grade: 1,
-    speedMode: 'normal', // normal, slow
+    speedMode: 'normal',
     lastTime: 0,
     spawnTimer: 0,
     apples: [],
     question: null,
-    // Bag system for questions to ensure full rotation and no repeats until exhausted
     questionBag: [],
     spawnCountSinceAnswer: 0,
-    lastSpawnedChar: null
+    lastSpawnedChar: null,
+    scale: 1.0 // Mobile scaling factor
 };
 
 // Mock Assets
@@ -61,11 +66,10 @@ let bgmInterval = null;
 // ----------------------------------------------------------------
 // Question Data (MEXT Compliant)
 // ----------------------------------------------------------------
-// Grade 1: 80 characters strict.
 const GRADE_1_KANJI = [
     { r: "いち", k: "一" }, { r: "みぎ", k: "右" }, { r: "あめ", k: "雨" }, { r: "えん", k: "円" },
-    { r: "おう", k: "王" }, { r: "おと", k: "音" }, { r: "した", k: "下" }, { r: "ひ (燃える)", k: "火" },
-    { r: "はな", k: "花" }, { r: "かい", k: "貝" }, { r: "まなぶ", k: "学" }, { r: "き (気分)", k: "気" },
+    { r: "おう", k: "王" }, { r: "おと", k: "音" }, { r: "した", k: "下" }, { r: "ひ (もえる)", k: "火" },
+    { r: "はな", k: "花" }, { r: "かい", k: "貝" }, { r: "まなぶ", k: "学" }, { r: "き (きぶん)", k: "気" },
     { r: "きゅう", k: "九" }, { r: "やすみ", k: "休" }, { r: "たま", k: "玉" }, { r: "きん", k: "金" },
     { r: "そら", k: "空" }, { r: "つき", k: "月" }, { r: "いぬ", k: "犬" }, { r: "みる", k: "見" },
     { r: "ご", k: "五" }, { r: "くち", k: "口" }, { r: "がっこう", k: "校" }, { r: "ひだり", k: "左" },
@@ -79,9 +83,9 @@ const GRADE_1_KANJI = [
     { r: "くさ", k: "草" }, { r: "あし", k: "足" }, { r: "むら", k: "村" }, { r: "おおきい", k: "大" },
     { r: "おとこ", k: "男" }, { r: "たけ", k: "竹" }, { r: "なか", k: "中" }, { r: "むし", k: "虫" },
     { r: "まち", k: "町" }, { r: "てん", k: "天" }, { r: "た", k: "田" }, { r: "つち", k: "土" },
-    { r: "に", k: "二" }, { r: "ひ (お日様)", k: "日" }, { r: "はいる", k: "入" }, { r: "とし", k: "年" },
+    { r: "に", k: "二" }, { r: "ひ (おひさま)", k: "日" }, { r: "はいる", k: "入" }, { r: "とし", k: "年" },
     { r: "しろい", k: "白" }, { r: "はち", k: "八" }, { r: "ひゃく", k: "百" }, { r: "ぶん", k: "文" },
-    { r: "き (樹木)", k: "木" }, { r: "ほん", k: "本" }, { r: "な", k: "名" }, { r: "め", k: "目" },
+    { r: "き (き)", k: "木" }, { r: "ほん", k: "本" }, { r: "な", k: "名" }, { r: "め", k: "目" },
     { r: "たつ", k: "立" }, { r: "ちから", k: "力" }, { r: "はやし", k: "林" }, { r: "ろく", k: "六" }
 ];
 
@@ -99,15 +103,15 @@ const QUESTION_DATA = {
     ],
     3: [
         { r: "まめ", k: "豆" }, { r: "さか", k: "坂", d: ["板"] }, { r: "さら", k: "皿", d: ["血"] },
-        { r: "ち (血液)", k: "血", d: ["皿"] }, { r: "かわ (皮膚)", k: "皮", d: ["波"] },
+        { r: "ち (けつえき)", k: "血", d: ["皿"] }, { r: "かわ (ひふ)", k: "皮", d: ["波"] },
         { r: "はこ", k: "箱" }, { r: "くすり", k: "薬" }, { r: "びょうき", k: "病" },
         { r: "うん", k: "運" }, { r: "どう", k: "動" }, { r: "おもい", k: "重" },
-        { r: "かるい", k: "軽" }, { r: "あつい (気温)", k: "暑" }, { r: "さむい", k: "寒" },
+        { r: "かるい", k: "軽" }, { r: "あつい (きおん)", k: "暑" }, { r: "さむい", k: "寒" },
         { r: "とく", k: "特" }, { r: "わるい", k: "悪" }, { r: "あんしん", k: "安" }
     ],
     4: [
-        { r: "あい", k: "愛" }, { r: "あん", k: "案" }, { r: "い (〜以上)", k: "以" },
-        { r: "い (服)", k: "衣" }, { r: "い (順位)", k: "位" }, { r: "い (囲む)", k: "囲" },
+        { r: "あい", k: "愛" }, { r: "あん", k: "案" }, { r: "い (〜いじょう)", k: "以" },
+        { r: "い (ふく)", k: "衣" }, { r: "い (じゅんい)", k: "位" }, { r: "い (かこむ)", k: "囲" },
         { r: "かんさつ", k: "観察", d: ["観祭", "観刷"] },
         { r: "せつめい", k: "説明" }, { r: "ようい", k: "用意" },
         { r: "きせつ", k: "季節" }, { r: "しぜん", k: "自然" }, { r: "しょうらい", k: "将来" },
@@ -121,7 +125,6 @@ const QUESTION_DATA = {
         { r: "じょうけん", k: "条件" }, { r: "せきにん", k: "責任" }
     ],
     6: [
-        // Expanded Grade 6 Jukugo
         { r: "けんぽう", k: "憲法" }, { r: "せいじ", k: "政治" }, { r: "せんきょ", k: "選挙" },
         { r: "ないかく", k: "内閣" }, { r: "うちゅう", k: "宇宙" }, { r: "れきし", k: "歴史" },
         { r: "そうり", k: "総理" }, { r: "こっかい", k: "国会" }, { r: "おうふく", k: "往復" },
@@ -137,8 +140,6 @@ const QUESTION_DATA = {
     ]
 };
 
-// Helper: Get random decoys
-// Strategy: Pick random Kanji from same grade that are NOT the target
 function getDecoys(targetKanji, grade) {
     const pool = QUESTION_DATA[grade] || QUESTION_DATA[1];
     let decoys = [];
@@ -157,16 +158,28 @@ function getDecoys(targetKanji, grade) {
 const player = {
     x: 0,
     y: 0,
-    width: 140,
-    height: 140,
+    width: CONFIG.BASE_PLAYER_SIZE,
+    height: CONFIG.BASE_PLAYER_SIZE,
     targetX: 0
 };
 
-// Resizing
+// Resizing & Scaling Logic
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    player.y = canvas.height - 150;
+
+    // Dynamic Scaling for Mobile
+    if (canvas.width < 600) {
+        state.scale = 0.6; // 60% size for mobile
+    } else {
+        state.scale = 1.0;
+    }
+
+    // Update Player Dimensions
+    player.width = CONFIG.BASE_PLAYER_SIZE * state.scale;
+    player.height = CONFIG.BASE_PLAYER_SIZE * state.scale;
+    player.y = canvas.height - player.height - 10; // Grounded
+
     player.targetX = canvas.width / 2;
     player.x = canvas.width / 2;
 }
@@ -195,7 +208,6 @@ canvas.addEventListener('touchstart', handleInput, { passive: false });
 // ----------------------------------------------------------------
 
 function startGame() {
-    // Get settings
     const gradeSelect = document.getElementById('grade-select');
     state.grade = parseInt(gradeSelect.value);
 
@@ -205,12 +217,10 @@ function startGame() {
         if (r.checked) state.speedMode = r.value;
     }
 
-    // Resume Audio
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
 
-    // Init State
     state.score = 0;
     state.timeLeft = CONFIG.GAME_DURATION;
     state.apples = [];
@@ -218,12 +228,11 @@ function startGame() {
     state.lastTime = performance.now();
     state.spawnTimer = 0;
 
-    // Init Bag
-    state.questionBag = []; // Will be filled in nextQuestion
+    // Init Bag logic
+    state.questionBag = [];
     state.spawnCountSinceAnswer = 0;
     state.lastSpawnedChar = null;
 
-    // UI
     scoreDisplay.innerText = 0;
     timeDisplay.innerText = state.timeLeft;
     overlayStart.classList.remove('active');
@@ -242,9 +251,7 @@ function nextQuestion() {
 
     // Bag Logic
     if (state.questionBag.length === 0) {
-        // Refill and shuffle
         state.questionBag = [...dataList];
-        // Fisher-Yates shuffle
         for (let i = state.questionBag.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [state.questionBag[i], state.questionBag[j]] = [state.questionBag[j], state.questionBag[i]];
@@ -259,15 +266,16 @@ function nextQuestion() {
         decoys: q.d ? q.d : getDecoys(q.k, state.grade)
     };
 
-    state.spawnCountSinceAnswer = 0; // Reset guarantee
+    state.spawnCountSinceAnswer = 0;
     questionText.innerText = state.question.reading;
 }
 
 function spawnApple() {
-    const margin = 50;
+    // Scaled margin
+    const margin = 50 * state.scale;
+    // Ensure x is within bounds even if canvas is small
     const x = Math.random() * (canvas.width - margin * 2) + margin;
 
-    // Selection Logic w/ Guarantee
     let char;
     if (state.spawnCountSinceAnswer >= 3) {
         char = state.question.answer;
@@ -280,7 +288,6 @@ function spawnApple() {
         }
     }
 
-    // No Repeats of falling object
     if (char === state.lastSpawnedChar) {
         if (char === state.question.answer) {
             char = state.question.decoys[0];
@@ -296,24 +303,18 @@ function spawnApple() {
         state.spawnCountSinceAnswer++;
     }
 
-    // Speed Logic
     let baseSpeed = CONFIG.APPLE_SPEED_BASE + (Math.random() * 2) + ((60 - state.timeLeft) / 20);
-    // Grade Mods
-    if (state.grade === 1) baseSpeed *= 0.8; // Base slower for G1
+    if (state.grade === 1) baseSpeed *= 0.8;
     if (state.grade === 6) baseSpeed *= 1.8;
-
-    // User Setting
     if (state.speedMode === 'slow') {
-        baseSpeed *= 0.7; // 30% slower
+        baseSpeed *= 0.7;
     }
 
     state.apples.push({
         x: x,
-        y: -60,
+        y: -60 * state.scale,
         char: char,
         speed: baseSpeed,
-        w: 60,
-        h: 60,
         swayPhase: Math.random() * Math.PI * 2
     });
 }
@@ -328,8 +329,10 @@ function update(dt) {
     timeDisplay.innerText = Math.floor(state.timeLeft);
 
     player.x += (player.targetX - player.x) * 0.2;
-    if (player.x < 50) player.x = 50;
-    if (player.x > canvas.width - 50) player.x = canvas.width - 50;
+    // Bound player within canvas
+    const halfW = player.width / 2;
+    if (player.x < halfW) player.x = halfW;
+    if (player.x > canvas.width - halfW) player.x = canvas.width - halfW;
 
     state.spawnTimer += dt;
     let currentSpawnRate = CONFIG.SPAWN_RATE_BASE - ((60 - state.timeLeft) * 10);
@@ -361,14 +364,15 @@ function update(dt) {
 }
 
 function checkCollision(p, a) {
+    // Scaled hit distance
     const dx = p.x - a.x;
-    const dy = (p.y + 20) - a.y;
+    const dy = (p.y + (20 * state.scale)) - a.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    return dist < 70;
+    // Base radius 35, hit radius 70.
+    return dist < (CONFIG.BASE_HIT_RADIUS * state.scale);
 }
 
 function handleCatch(apple) {
-    // Correctness check by Value
     if (apple.char === state.question.answer) {
         state.score += CONFIG.SCORE_CORRECT;
         showFeedback("⭕️", apple.x, apple.y);
@@ -388,7 +392,7 @@ function showFeedback(text, x, y) {
     el.style.position = 'absolute';
     el.style.left = x + 'px';
     el.style.top = y + 'px';
-    el.style.fontSize = '3rem';
+    el.style.fontSize = (3 * state.scale) + 'rem'; // Scale text too
     el.style.fontWeight = 'bold';
     el.style.color = (text === '⭕️') ? 'red' : 'blue';
     el.style.pointerEvents = 'none';
@@ -408,40 +412,44 @@ function showFeedback(text, x, y) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Player Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath();
-    ctx.ellipse(player.x, player.y + 60, 60, 20, 0, 0, Math.PI * 2);
+    ctx.ellipse(player.x, player.y + (60 * state.scale), (60 * state.scale), (20 * state.scale), 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (imgPlayer.complete) {
         ctx.drawImage(imgPlayer, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
     } else {
         ctx.fillStyle = 'green';
-        ctx.fillRect(player.x - 40, player.y - 40, 80, 80);
+        ctx.fillRect(player.x - (player.width / 2), player.y - (player.height / 2), player.width, player.height);
     }
 
     state.apples.forEach(apple => {
+        const r = CONFIG.BASE_APPLE_RADIUS * state.scale;
+
         ctx.fillStyle = '#FF5252';
         ctx.beginPath();
-        ctx.arc(apple.x, apple.y, 35, 0, Math.PI * 2);
+        ctx.arc(apple.x, apple.y, r, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = '#5D4037';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 4 * state.scale;
         ctx.beginPath();
-        ctx.moveTo(apple.x, apple.y - 30);
-        ctx.lineTo(apple.x + 5, apple.y - 45);
+        ctx.moveTo(apple.x, apple.y - (30 * state.scale));
+        ctx.lineTo(apple.x + (5 * state.scale), apple.y - (45 * state.scale));
         ctx.stroke();
 
         ctx.fillStyle = '#66BB6A';
         ctx.beginPath();
-        ctx.ellipse(apple.x + 10, apple.y - 40, 10, 5, Math.PI / 4, 0, Math.PI * 2);
+        ctx.ellipse(apple.x + (10 * state.scale), apple.y - (40 * state.scale), (10 * state.scale), (5 * state.scale), Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = 'white';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * state.scale;
         ctx.strokeStyle = '#B71C1C';
-        ctx.font = 'bold 36px "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
+        const fontSize = Math.floor(CONFIG.BASE_FONT_SIZE * state.scale);
+        ctx.font = `bold ${fontSize}px "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -466,7 +474,7 @@ function endGame() {
     overlayGameover.classList.add('active');
     document.getElementById('final-score').innerText = state.score;
     const evalEl = document.getElementById('evaluation-message');
-    if (state.score < 0) evalEl.innerText = "ドンマイ！";
+    if (state.score < 0) evalEl.innerText = "どんまい！";
     else if (state.score < 50) evalEl.innerText = "いいかんじ！";
     else if (state.score < 100) evalEl.innerText = "すごい！かっこいい！";
     else evalEl.innerText = "てんさい！！";
