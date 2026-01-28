@@ -410,31 +410,46 @@ footer p {
 
   /* Header Mobile Optimization */
   .header-inner {
-    flex-wrap: nowrap;
-    /* Force single line */
+    flex-direction: column;
+    /* Vertical stack */
+    align-items: center;
     gap: 10px;
   }
 
+  .site-title {
+    width: auto;
+    margin-bottom: 8px;
+    /* Spacing below logo */
+  }
+
   .site-title span {
-    font-size: 0.9rem;
-    /* reduce title size instead of hiding */
+    font-size: 1.0rem;
+    /* maintain readability */
     white-space: nowrap;
   }
 
   .site-title img {
-    height: 32px;
-    /* Smaller logo */
+    height: 40px;
+  }
+
+  nav {
+    width: 100%;
+    /* Full width for wrapping */
   }
 
   nav ul {
-    gap: 4px;
-    /* Tighter gap */
+    justify-content: center;
+    /* Center menu items */
+    flex-wrap: wrap;
+    /* Allow wrapping */
+    gap: 10px 15px;
+    /* Spacing */
   }
 
   nav a {
-    padding: 6px 8px;
-    /* Tighter padding */
-    font-size: 0.75rem;
-    /* Smaller text */
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    /* Keep individual links on one line */
   }
 }
