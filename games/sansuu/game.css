@@ -298,3 +298,21 @@ body {
         transform: scale(1.1);
     }
 }
+
+/* Mobile Optimizations */
+@media (max-width: 600px) {
+    .question-box {
+        font-size: 1.5rem;
+        padding: 6px 16px;
+    }
+
+    .hud-combo {
+        font-size: 1.5rem;
+        top: 140px;
+    }
+
+    .hud-top {
+        padding: 5px 10px;
+        padding-top: max(5px, env(safe-area-inset-top));
+    }
+}

@@ -305,7 +305,7 @@ function spawnApple() {
 
     let baseSpeed = CONFIG.APPLE_SPEED_BASE + (Math.random() * 2) + ((60 - state.timeLeft) / 20);
     if (state.grade === 1) baseSpeed *= 0.8;
-    if (state.grade === 6) baseSpeed *= 1.8;
+    if (state.grade === 6) baseSpeed *= 2.0;
     if (state.speedMode === 'slow') {
         baseSpeed *= 0.7;
     }
@@ -314,8 +314,7 @@ function spawnApple() {
         x: x,
         y: -60 * state.scale,
         char: char,
-        speed: baseSpeed,
-        swayPhase: Math.random() * Math.PI * 2
+        speed: baseSpeed
     });
 }
 
@@ -347,9 +346,7 @@ function update(dt) {
         let apple = state.apples[i];
         apple.y += apple.speed;
 
-        if (state.grade >= 6) {
-            apple.x += Math.sin(apple.y / 50 + apple.swayPhase) * 1.5;
-        }
+
 
         if (checkCollision(player, apple)) {
             handleCatch(apple);
