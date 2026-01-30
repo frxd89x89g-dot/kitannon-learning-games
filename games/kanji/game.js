@@ -445,7 +445,10 @@ function draw() {
         ctx.fillStyle = 'white';
         ctx.lineWidth = 3 * state.scale;
         ctx.strokeStyle = '#B71C1C';
-        const fontSize = Math.floor(CONFIG.BASE_FONT_SIZE * state.scale);
+        let fontSize = Math.floor(CONFIG.BASE_FONT_SIZE * state.scale);
+        if (apple.char.length > 1) {
+            fontSize = Math.floor(fontSize * 0.6); // Shrink for multi-char
+        }
         ctx.font = `bold ${fontSize}px "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
